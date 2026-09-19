@@ -2,6 +2,7 @@ from datetime import datetime
 from uuid import UUID
 
 from ninja import Schema
+from pydantic import ConfigDict, Field
 
 
 class UserOut(Schema):
@@ -37,6 +38,29 @@ class PublishFormIn(Schema):
 
 class MessageOut(Schema):
     message: str
+
+
+class PublicFormOut(Schema):
+    title: str
+    version_id: UUID
+    form_schema: dict
+    privacy_notice: str
+    privacy_notice_version: int
+
+
+class PublicSubmissionIn(Schema):
+    model_config = ConfigDict(extra="forbid")
+
+    version_id: UUID
+    fields: dict = Field(default_factory=dict)
+
+
+class PublicSubmissionOut(Schema):
+    receipt_id: str
+    status: str
+    message: str
+    receipt_token: str
+    next_action: str
 
 
 class ProblemOut(Schema):

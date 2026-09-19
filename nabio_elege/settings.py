@@ -19,6 +19,9 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 # Quick-start development settings - unsuitable for production
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env('SECRET_KEY')
+FIELD_ENCRYPTION_KEY = env('FIELD_ENCRYPTION_KEY', default='')
+BLIND_INDEX_KEY = env('BLIND_INDEX_KEY', default='')
+RECEIPT_TOKEN_KEY = env('RECEIPT_TOKEN_KEY', default='')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
@@ -46,6 +49,7 @@ INSTALLED_APPS = [
     'apps.campaigns',
     'apps.forms',
     'apps.finance',
+    'apps.operations',
 ]
 
 MIDDLEWARE = [
@@ -131,3 +135,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CELERY_BROKER_URL = env('REDIS_URL', default='redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = env('REDIS_URL', default='redis://localhost:6379/0')
 CELERY_TIMEZONE = TIME_ZONE
+CELERY_BEAT_SCHEDULE = {
+    'dispatch-outbox': {
+        'task': 'core.dispatch_outbox',
+        'schedule': 5.0,
+    },
+}

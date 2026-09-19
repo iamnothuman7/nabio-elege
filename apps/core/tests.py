@@ -2,10 +2,12 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.test import TransactionTestCase
+from unittest.mock import Mock
 
 from apps.campaigns.models import Campaign, Tenant
 
 from .models import AuditEvent, OutboxEvent
+from .outbox import dispatch_outbox_event
 from .services import enqueue_outbox_event
 
 
@@ -56,3 +58,20 @@ class AuditAndOutboxTests(TransactionTestCase):
                 aggregate_id=self.campaign.id,
             )
         self.assertEqual(event.status, OutboxEvent.Status.PENDING)
+
+    def test_outbox_dispatches_known_event_and_marks_it_published(self):
+        with transaction.atomic():
+            event = enqueue_outbox_event(
+                tenant=self.tenant,
+                campaign=self.campaign,
+                kind="submission.accepted.v1",
+                aggregate_type="submission",
+                aggregate_id="fictitious-submission",
+            )
+        sender = Mock()
+        self.assertTrue(dispatch_outbox_event(event.id, send_task=sender))
+        event.refresh_from_db()
+        sender.assert_called_once_with(
+            "forms.process_submission", args=["fictitious-submission"]
+        )
+        self.assertEqual(event.status, OutboxEvent.Status.PUBLISHED)

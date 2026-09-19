@@ -7,8 +7,20 @@ from django.utils import timezone
 
 from apps.campaigns.models import Campaign, Membership, Permission, Role, Tenant
 
-from .models import Obligation, ObligationApproval, PaymentAllocation, PaymentRecord
-from .services import decide_obligation, submit_obligation
+from .models import (
+    BankAccount,
+    BankEntry,
+    Obligation,
+    ObligationApproval,
+    PaymentAllocation,
+    PaymentRecord,
+)
+from .services import (
+    allocate_payment,
+    decide_obligation,
+    reconcile_bank_entry,
+    submit_obligation,
+)
 
 
 class FinancialIntegrityTests(TestCase):
@@ -27,6 +39,7 @@ class FinancialIntegrityTests(TestCase):
         )
         create_permission = Permission.objects.get(code="finance.create.campaign")
         approve_permission = Permission.objects.get(code="finance.approve.campaign")
+        reconcile_permission = Permission.objects.get(code="finance.reconcile.campaign")
         creator_role = Role.objects.create(
             tenant=self.tenant, code="creator", name="Criador"
         )
@@ -34,7 +47,7 @@ class FinancialIntegrityTests(TestCase):
         approver_role = Role.objects.create(
             tenant=self.tenant, code="approver", name="Aprovador"
         )
-        approver_role.permissions.add(approve_permission)
+        approver_role.permissions.add(approve_permission, reconcile_permission)
         Membership.objects.create(
             user=self.creator,
             tenant=self.tenant,
@@ -106,3 +119,62 @@ class FinancialIntegrityTests(TestCase):
                 obligation=self.obligation,
                 amount_cents=60_000,
             )
+
+    def test_payment_allocation_uses_remaining_balances(self):
+        payment = PaymentRecord.objects.create(
+            tenant=self.tenant,
+            campaign=self.campaign,
+            created_by=self.creator,
+            external_reference="payment-service-1",
+            amount_cents=60_000,
+            paid_at=timezone.now(),
+        )
+        allocation = allocate_payment(
+            actor=self.approver,
+            payment_id=payment.id,
+            obligation_id=self.obligation.id,
+            amount_cents=50_000,
+        )
+        self.assertEqual(allocation.amount_cents, 50_000)
+        with self.assertRaises(ValidationError):
+            allocate_payment(
+                actor=self.approver,
+                payment_id=payment.id,
+                obligation_id=self.obligation.id,
+                amount_cents=20_000,
+            )
+
+    def test_bank_entry_reconciliation_tracks_partial_state(self):
+        account = BankAccount.objects.create(
+            tenant=self.tenant,
+            campaign=self.campaign,
+            created_by=self.creator,
+            name="Conta fictícia",
+            funding_source="test",
+        )
+        entry = BankEntry.objects.create(
+            tenant=self.tenant,
+            campaign=self.campaign,
+            created_by=self.creator,
+            account=account,
+            external_id="entry-1",
+            occurred_at=timezone.now(),
+            amount_cents=-60_000,
+            original_line_hash="a" * 64,
+        )
+        payment = PaymentRecord.objects.create(
+            tenant=self.tenant,
+            campaign=self.campaign,
+            created_by=self.creator,
+            external_reference="payment-bank-1",
+            amount_cents=60_000,
+            paid_at=timezone.now(),
+        )
+        reconcile_bank_entry(
+            actor=self.approver,
+            entry_id=entry.id,
+            payment_id=payment.id,
+            amount_cents=30_000,
+        )
+        entry.refresh_from_db()
+        self.assertEqual(entry.status, BankEntry.Status.PARTIAL)

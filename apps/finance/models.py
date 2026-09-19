@@ -195,3 +195,113 @@ class PaymentAllocation(UUIDTimeStampedModel):
     def save(self, *args, **kwargs):
         self.full_clean()
         return super().save(*args, **kwargs)
+
+
+class BankAccount(CampaignScopedModel):
+    name = models.CharField(max_length=180)
+    funding_source = models.CharField(max_length=120)
+    currency = models.CharField(max_length=3, default="BRL")
+    active = models.BooleanField(default=True)
+
+
+class BankEntry(CampaignScopedModel):
+    class Status(models.TextChoices):
+        UNRECONCILED = "unreconciled", "Não conciliada"
+        PARTIAL = "partial", "Parcial"
+        RECONCILED = "reconciled", "Conciliada"
+        DIVERGENT = "divergent", "Divergente"
+
+    account = models.ForeignKey(BankAccount, on_delete=models.PROTECT, related_name="entries")
+    external_id = models.CharField(max_length=180)
+    occurred_at = models.DateTimeField()
+    amount_cents = models.BigIntegerField()
+    description = models.CharField(max_length=500, blank=True)
+    original_line_hash = models.CharField(max_length=64)
+    status = models.CharField(
+        max_length=16, choices=Status.choices, default=Status.UNRECONCILED
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["account", "external_id"], name="uniq_bank_entry_external_id"
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(amount_cents=0), name="bank_entry_amount_non_zero"
+            ),
+        ]
+
+
+class ReconciliationLink(UUIDTimeStampedModel):
+    entry = models.ForeignKey(
+        BankEntry, on_delete=models.PROTECT, related_name="reconciliations"
+    )
+    payment = models.ForeignKey(
+        PaymentRecord, on_delete=models.PROTECT, related_name="reconciliations"
+    )
+    amount_cents = models.PositiveBigIntegerField()
+    reversed_at = models.DateTimeField(null=True, blank=True)
+    reason = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["entry", "payment"], name="uniq_entry_payment_reconciliation"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(amount_cents__gt=0),
+                name="reconciliation_amount_positive",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.entry_id and self.payment_id:
+            if self.entry.campaign_id != self.payment.campaign_id:
+                raise ValidationError(
+                    "A entrada e o pagamento devem pertencer à mesma campanha."
+                )
+
+
+class FinancialReceipt(CampaignScopedModel):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pendente"
+        REVIEWED = "reviewed", "Revisado"
+        RELEASED = "released", "Liberado"
+        RETURNED = "returned", "Devolvido"
+
+    origin_ref = models.CharField(max_length=180)
+    amount_cents = models.PositiveBigIntegerField()
+    received_at = models.DateTimeField()
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
+    documentation_ref = models.CharField(max_length=180, blank=True)
+
+
+class InKindContribution(CampaignScopedModel):
+    origin_ref = models.CharField(max_length=180)
+    description = models.CharField(max_length=500)
+    estimated_amount_cents = models.PositiveBigIntegerField()
+    received_at = models.DateTimeField()
+    reviewed = models.BooleanField(default=False)
+
+
+class AccountingBatch(CampaignScopedModel):
+    class Status(models.TextChoices):
+        BUILDING = "building", "Em montagem"
+        REVIEWED = "reviewed", "Conferido"
+        EXPORTED = "exported", "Exportado"
+        DELIVERED = "delivered", "Entregue"
+        RECTIFIED = "rectified", "Retificado"
+
+    cutoff_at = models.DateTimeField()
+    manifest_hash = models.CharField(max_length=64)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.BUILDING)
+
+
+class FilingRecord(UUIDTimeStampedModel):
+    batch = models.ForeignKey(
+        AccountingBatch, on_delete=models.PROTECT, related_name="filings"
+    )
+    protocol_ref = models.CharField(max_length=180)
+    delivered_at = models.DateTimeField()
+    evidence_document = models.ForeignKey("core.Document", on_delete=models.PROTECT)

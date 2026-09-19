@@ -4,7 +4,7 @@ Plataforma administrativa para campanhas políticas, implementada como monólito
 
 ## Estado atual
 
-O marco R0 está em desenvolvimento. A base já contém:
+O marco R0 e as primeiras fatias verticais de R1 estão implementados. A base já contém:
 
 - organizações e campanhas isoladas;
 - vínculos, papéis e permissões por campanha;
@@ -14,6 +14,10 @@ O marco R0 está em desenvolvimento. A base já contém:
 - pessoas, contatos, manifestações, supressões e atendimentos;
 - obrigações, aprovações, pagamentos e alocações com valores em centavos;
 - API Django Ninja autenticada por sessão;
+- recebimento público e assistido com payload cifrado, idempotência e recibo opaco;
+- processamento assíncrono de submissão até atendimento;
+- projetos, dependências de tarefas e estoque transacional;
+- contas bancárias, extratos, alocação de pagamentos e conciliação parcial;
 - testes negativos de isolamento e invariantes críticas.
 
 Esta versão ainda não está liberada para dados reais ou produção.
@@ -29,6 +33,8 @@ Requisitos: Python 3.11, Docker e Docker Compose.
 5. Aplique as migrações com `python manage.py migrate`.
 6. Inicie a API com `python manage.py runserver`.
 
+Para processamento assíncrono, execute também `celery -A nabio_elege worker -l info` e `celery -A nabio_elege beat -l info`.
+
 A documentação interativa fica em `/api/docs`; a verificação pública de saúde fica em `/api/healthz`.
 
 ## Testes
@@ -40,6 +46,8 @@ python manage.py makemigrations --check --dry-run --settings=nabio_elege.test_se
 ```
 
 Os testes usam SQLite isolado e dados fictícios. A validação de PostgreSQL, RLS, concorrência e upload real será adicionada antes de qualquer piloto.
+
+As chaves de criptografia devem ser independentes por ambiente. Gere uma chave Fernet com `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` e mantenha o resultado somente no gerenciador de segredos.
 
 ## Segurança
 

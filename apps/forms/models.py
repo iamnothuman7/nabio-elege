@@ -166,6 +166,13 @@ class SourceLink(CampaignScopedModel):
     expires_at = models.DateTimeField(null=True, blank=True)
     revoked_at = models.DateTimeField(null=True, blank=True)
 
+    def clean(self):
+        super().clean()
+        if self.form_id and self.campaign_id and self.form.campaign_id != self.campaign_id:
+            raise ValidationError(
+                {"form": "O formulário deve pertencer à mesma campanha do link."}
+            )
+
     @property
     def is_active(self):
         if self.revoked_at:
@@ -324,8 +331,12 @@ class ServiceRequest(CampaignScopedModel):
 
     protocol = models.CharField(max_length=80, unique=True, default=opaque_code)
     person = models.ForeignKey(Person, on_delete=models.PROTECT, null=True, blank=True)
-    submission = models.ForeignKey(
-        Submission, on_delete=models.PROTECT, null=True, blank=True
+    submission = models.OneToOneField(
+        Submission,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="service_request",
     )
     category = models.CharField(max_length=120)
     assignee = models.ForeignKey(
