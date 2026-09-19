@@ -6,6 +6,13 @@ __pycache__/
 venv/
 .env
 db.sqlite3
+test.sqlite3
+.coverage
+htmlcov/
+.pytest_cache/
+media/
+staticfiles/
+tmp/
 
 # OS
 .DS_Store
