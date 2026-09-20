@@ -13,7 +13,7 @@ Atualizado em 2026-09-20. “Parcial” significa que há interface ou fluxo exe
 | M07 Compras e fornecedores | Parcial | Itens, solicitação, pedido aprovado, obrigação canônica e recebimento parcial em estoque |
 | M08 Jurídico | Parcial | Casos, responsáveis e revisão; acesso ainda por campanha/papel, não por caso |
 | M09 Calendário regulatório | Parcial | Prazos e acompanhamento manual; sem sincronização normativa |
-| M10 Estoque | Parcial | Entradas/saídas transacionais, reservas, liberação e consumo sem saldo negativo |
+| M10 Estoque | Parcial | Entradas/saídas, reservas com expiração automática, transferências em trânsito, recebimento parcial e devolução com conferência independente |
 | M11 Patrimônio | Parcial | Bens e custódias com prevenção de conflito de período |
 | M12 Logística | Parcial | Viagens, responsáveis e prevenção de sobreposição de recursos |
 | M13 Equipes | Parcial | Papéis, revogação, cabos eleitorais, voluntários, treinamento, escalas e presença |
@@ -44,11 +44,13 @@ Os dados de demonstração não indicam candidatura, partido, número ou data el
 - Implementar e homologar RLS no PostgreSQL; ampliar testes concorrentes. Há um teste concorrente de estoque e uma matriz CI PostgreSQL, não uma auditoria completa de concorrência.
 - Completar confirmação de canais, governança de finalidades, treinamento e direitos de privacidade; implementar retenção, bloqueio legal e descarte também em backups.
 - Homologar orçamento comprometido, alçadas, documentos obrigatórios, arrecadação, regras contábeis e formatos oficiais com responsáveis qualificados. Não há certificação ou transmissão ao TSE.
-- Completar ACL por caso jurídico, cotações, versionamento de dados bancários, transferências em trânsito e expiração automática de reservas.
+- Completar ACL por caso jurídico, cotações e versionamento de dados bancários. Transferências em trânsito e expiração de reservas já estão implementadas; a homologação de concorrência permanece necessária.
 - Dimensionar mapas para o tráfego previsto e selecionar provedor de tiles apropriado; o mapa demonstrativo depende de serviços externos.
 - Concluir exportações assíncronas volumosas, armazenamento de auditoria externo e monitoramento operacional.
 - Executar testes de carga, restauração, segurança e acessibilidade e homologar os dois ciclos completos da especificação.
 
 ## Evidências e limites da validação
+
+A continuação acrescentou 18 testes de distribuição/estoque e seis testes de proteção de implantação. A auditoria real identificou falha na CI anterior de PostgreSQL; passar em SQLite não elimina esse bloqueio. O estado do servidor e o roteiro adaptado estão em `producao.md`.
 
 Há testes automatizados para páginas dos módulos, isolamento, permissões, aprovação independente, idempotência, versões concorrentes, estoque, compras, finanças, formulários, documentos, MFA, mapas e cadastros voluntários. As verificações de antivírus em testes usam simulação; é necessário testar uma instalação real. A interface e os tiles foram conferidos em navegador desktop e em viewport móvel. A execução local da suíte é SQLite; a execução PostgreSQL da CI precisa ser confirmada no ambiente correspondente.

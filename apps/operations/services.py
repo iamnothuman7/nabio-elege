@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from apps.campaigns.services import require_campaign_permission
+from apps.campaigns.models import Campaign
 from apps.core.services import append_audit_event, enqueue_outbox_event
 
 from .models import StockBalance, StockItem, StockMovement, Task, TaskDependency, Warehouse
@@ -49,6 +50,16 @@ def add_task_dependency(*, actor, task_id, depends_on_id):
     return dependency
 
 
+def lock_stock_item(*, actor, item_id):
+    """All stock writes use campaign -> item -> warehouse -> balance locks."""
+    campaign_id = StockItem.objects.values_list("campaign_id", flat=True).get(pk=item_id)
+    campaign = Campaign.objects.select_for_update().get(pk=campaign_id)
+    require_campaign_permission(actor, campaign, "stock.manage.campaign")
+    item = StockItem.objects.select_for_update().get(pk=item_id, campaign=campaign)
+    item.campaign = campaign
+    return item
+
+
 @transaction.atomic
 def apply_stock_movement(
     *, actor, item_id, warehouse_id, kind, quantity, reason, origin_type="", origin_id=None
@@ -59,15 +70,14 @@ def apply_stock_movement(
         raise ValidationError("Quantidade inválida.")
     if not quantity.is_finite() or quantity <= 0 or quantity >= Decimal("100000000000000") or quantity != quantity.quantize(Decimal("0.0001")):
         raise ValidationError("A quantidade deve ser positiva.")
-    item = (
-        StockItem.objects.select_for_update()
-        .select_related("campaign", "tenant")
-        .get(pk=item_id)
-    )
+    item = lock_stock_item(actor=actor, item_id=item_id)
     warehouse = Warehouse.objects.select_for_update().get(pk=warehouse_id)
     require_campaign_permission(actor, item.campaign, "stock.manage.campaign")
     if item.campaign_id != warehouse.campaign_id:
         raise ValidationError("Item e depósito devem pertencer à mesma campanha.")
+
+    from apps.workspace.inventory import expire_item_reservations_locked
+    expire_item_reservations_locked(item)
 
     balance, _ = StockBalance.objects.select_for_update().get_or_create(
         item=item, warehouse=warehouse

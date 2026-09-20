@@ -217,10 +217,68 @@ class StockReservation(CampaignScopedModel):
     quantity = models.DecimalField(max_digits=18, decimal_places=4)
     purpose = models.CharField("Finalidade administrativa", max_length=180)
     expires_at = models.DateTimeField("Expira em")
-    status = models.CharField(max_length=16, choices=[("active", "Ativa"), ("released", "Liberada"), ("consumed", "Consumida")], default="active")
+    status = models.CharField(max_length=16, choices=[("active", "Ativa"), ("released", "Liberada"), ("consumed", "Consumida"), ("expired", "Expirada")], default="active")
 
     class Meta:
         constraints = [models.CheckConstraint(condition=models.Q(quantity__gt=0), name="stock_reservation_positive")]
+
+
+class StockTransfer(CampaignScopedModel):
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Preparando envio"
+        IN_TRANSIT = "in_transit", "Em trânsito"
+        RECEIVED = "received", "Recebida integralmente"
+        RETURNED = "returned", "Saldo devolvido à origem"
+        CANCELLED = "cancelled", "Cancelada antes do envio"
+
+    item = models.ForeignKey("operations.StockItem", on_delete=models.PROTECT)
+    source_warehouse = models.ForeignKey("operations.Warehouse", on_delete=models.PROTECT, related_name="outgoing_transfers")
+    destination_warehouse = models.ForeignKey("operations.Warehouse", on_delete=models.PROTECT, related_name="incoming_transfers")
+    quantity = models.DecimalField("Quantidade a enviar", max_digits=18, decimal_places=4)
+    received_quantity = models.DecimalField(max_digits=18, decimal_places=4, default=0)
+    returned_quantity = models.DecimalField(max_digits=18, decimal_places=4, default=0)
+    purpose = models.CharField("Finalidade operacional", max_length=180)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.DRAFT)
+    dispatched_at = models.DateTimeField(null=True, blank=True)
+    dispatched_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["campaign", "status"], name="stock_transfer_campaign_status")]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(quantity__gt=0), name="transfer_quantity_positive"),
+            models.CheckConstraint(condition=~models.Q(source_warehouse=models.F("destination_warehouse")), name="transfer_different_warehouses"),
+            models.CheckConstraint(condition=models.Q(received_quantity__gte=0, returned_quantity__gte=0), name="transfer_settled_nonnegative"),
+            models.CheckConstraint(condition=models.Q(quantity__gte=models.F("received_quantity") + models.F("returned_quantity")), name="transfer_settled_within_total"),
+        ]
+
+    @property
+    def in_transit_quantity(self):
+        return self.quantity - self.received_quantity - self.returned_quantity if self.status == self.Status.IN_TRANSIT else 0
+
+    def clean(self):
+        super().clean()
+        if self.source_warehouse_id and self.source_warehouse_id == self.destination_warehouse_id:
+            raise ValidationError({"destination_warehouse": "Escolha um depósito diferente da origem."})
+
+    def __str__(self):
+        return f"Transferência {str(self.pk)[:8]}"
+
+
+class StockTransferReceipt(CampaignScopedModel):
+    transfer = models.ForeignKey(StockTransfer, on_delete=models.PROTECT, related_name="receipts")
+    kind = models.CharField(max_length=16, choices=[("receive", "Recebimento no destino"), ("return", "Devolução à origem")])
+    quantity = models.DecimalField(max_digits=18, decimal_places=4)
+    evidence_reference = models.CharField("Comprovante operacional", max_length=180)
+    movement = models.OneToOneField("operations.StockMovement", on_delete=models.PROTECT)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(quantity__gt=0), name="transfer_receipt_positive")]
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValidationError("Comprovantes de transferência não podem ser alterados.")
+        return super().save(*args, **kwargs)
 
 
 class PurchaseReceipt(CampaignScopedModel):

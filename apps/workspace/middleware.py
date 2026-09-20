@@ -26,7 +26,7 @@ class AccessSecurityMiddleware:
                 response = JsonResponse({"detail": "Muitos envios. Aguarde um minuto e tente novamente."}, status=429)
                 response["Retry-After"] = "60"
                 return response
-        if request.user.is_authenticated:
+        if request.path != "/healthz/" and request.user.is_authenticated:
             profile, _ = SecurityProfile.objects.get_or_create(user=request.user)
             stamp = request.session.get("security_version", profile.session_version)
             if stamp != profile.session_version or not request.user.is_active:

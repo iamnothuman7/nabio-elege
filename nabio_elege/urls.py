@@ -18,8 +18,10 @@ from django.contrib import admin
 from django.urls import include, path
 
 from apps.api.api import api
+from apps.core.health import liveness
 
 urlpatterns = [
+    path('healthz/', liveness, name='healthz'),
     path('api/', api.urls),
     path('', include('apps.workspace.urls')),
 ]

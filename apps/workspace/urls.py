@@ -18,6 +18,7 @@ urlpatterns = [
     path("c/<uuid:campaign_id>/fase/", views.campaign_phase, name="campaign_phase"),
     path("c/<uuid:campaign_id>/contabilidade/<uuid:object_id>/exportar/", views.accounting_export, name="accounting_export"),
     path("c/<uuid:campaign_id>/estoque/movimentar/", views.stock_movement, name="stock_movement"),
+    path("c/<uuid:campaign_id>/estoque/liberar-vencidas/", views.stock_expire, name="stock_expire"),
     path("c/<uuid:campaign_id>/documentos/<uuid:object_id>/<uuid:version_id>/baixar/", views.document_download, name="document_download"),
     path("c/<uuid:campaign_id>/documentos/<uuid:object_id>/analisar/", views.document_rescan, name="document_rescan"),
     path("c/<uuid:campaign_id>/formularios/<uuid:object_id>/construir/", form_views.form_builder, name="form_builder"),

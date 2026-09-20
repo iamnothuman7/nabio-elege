@@ -7,13 +7,23 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
+      fail-fast: false
       matrix:
-        settings: [test_settings, postgres_test_settings]
+        include:
+          - settings: test_settings
+            python: "3.11"
+            postgres: "postgres:15-alpine"
+          - settings: postgres_test_settings
+            python: "3.12"
+            postgres: "postgres:14-alpine"
+          - settings: postgres_test_settings
+            python: "3.12"
+            postgres: "postgres:15-alpine"
     services:
       postgres:
-        image: postgres:15-alpine
+        image: ${{ matrix.postgres }}
         env:
           POSTGRES_DB: nabio_test
           POSTGRES_USER: nabio_test
@@ -31,10 +41,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python }}
           cache: pip
       - run: python -m pip install --upgrade pip
-      - run: python -m pip install -r requirements.txt
+      - run: python -m pip install -r requirements-production.txt
+      - run: python -m compileall -q apps nabio_elege
       - run: python manage.py check --settings=nabio_elege.${{ matrix.settings }}
       - run: python manage.py makemigrations --check --dry-run --settings=nabio_elege.${{ matrix.settings }}
       - run: python manage.py test --settings=nabio_elege.${{ matrix.settings }}

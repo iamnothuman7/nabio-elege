@@ -29,6 +29,7 @@ from apps.operations.services import apply_stock_movement
 from .document_services import private_storage, require_document_access, rescan_document, upload_document
 from .models import AssetBooking, ClosureItem, EditorialContent, Invitation, OfficialDataset, Reviewable, StockReservation
 from .models import ElectorRegistration, FieldActivity, FieldAssignment, FieldWorker
+from .models import StockTransfer
 from .registry import LABELS, MODULES, REGISTRY
 from .services import audit, can_edit, check_version, execute_action, import_aggregate_csv, prepare_create, require_writable, validate_booking
 from .ui_forms import model_form_class
@@ -168,7 +169,9 @@ def module_edit(request, campaign_id, key, object_id=None):
     if request.method == "POST":
         try:
             with transaction.atomic():
-                Campaign.objects.select_for_update().get(pk=campaign_id)
+                locked_campaign = Campaign.objects.select_for_update().get(pk=campaign_id)
+                require_writable(locked_campaign)
+                require_campaign_permission(request.user, locked_campaign, config.write)
                 if instance:
                     instance = config.model.objects.select_for_update().get(pk=object_id, campaign_id=campaign_id)
                     check_version(instance, request.POST.get("row_version"))
@@ -219,10 +222,13 @@ ACTION_LABELS = {"submit": "Enviar para revisão", "approve": "Aprovar", "reject
 
 
 ACTION_LABELS.update({"add_line": "Adicionar linha de orçamento", "file": "Registrar protocolo externo"})
+ACTION_LABELS.update({"dispatch": "Confirmar saída para transporte", "receive_transfer": "Conferir recebimento no destino", "return_transfer": "Conferir devolução à origem"})
 ACTION_LABELS.update({"train": "Registrar capacitação", "pause": "Pausar integrante", "resume": "Reativar integrante", "confirm": "Confirmar escala", "checkin": "Registrar presença", "verify": "Conferir manifestação", "suppress": "Suprimir contato"})
 
 
 def available_actions(obj):
+    if isinstance(obj, StockTransfer):
+        return {"draft": ["dispatch", "cancel"], "in_transit": ["receive_transfer", "return_transfer"]}.get(obj.status, [])
     if isinstance(obj, FieldWorker):
         return (["train"] if obj.training_status == "pending" else []) + (["pause"] if obj.status == "active" else ["resume"] if obj.status == "paused" else [])
     if isinstance(obj, FieldAssignment):
@@ -287,6 +293,10 @@ def module_detail(request, campaign_id, key, object_id):
     if isinstance(obj, FieldActivity):
         context["field_assignments"] = obj.assignments.select_related("worker")
     campaign = context["campaign"]
+    if isinstance(obj, StockTransfer):
+        context["transfer_receipts"] = obj.receipts.select_related("created_by").order_by("created_at")
+        context["transfer_balances"] = StockBalance.objects.filter(item=obj.item, warehouse_id__in=[obj.source_warehouse_id, obj.destination_warehouse_id]).select_related("warehouse")
+        context["display_fields"] += ["received_quantity", "returned_quantity", "dispatched_at", "dispatched_by", "completed_at"]
     if isinstance(obj, Task):
         context["dependencies"] = obj.dependencies.select_related("depends_on")
         context["task_options"] = Task.objects.filter(campaign=campaign).exclude(pk=obj.pk).order_by("title")[:200]
@@ -359,6 +369,22 @@ def stock_movement(request, campaign_id):
             user_error(request, exc)
     context.update(title="Movimentar estoque", active="itens", items=StockItem.objects.filter(campaign_id=campaign_id), warehouses=Warehouse.objects.filter(campaign_id=campaign_id), command_id=str(uuid.uuid4()))
     return render(request, "workspace/stock.html", context)
+
+
+@login_required
+@require_POST
+def stock_expire(request, campaign_id):
+    context = campaign_context(request, campaign_id)
+    from .inventory import expire_item_reservations_locked
+    with transaction.atomic():
+        campaign = Campaign.objects.select_for_update().get(pk=campaign_id)
+        require_campaign_permission(request.user, campaign, "stock.manage.campaign")
+        count = 0
+        item_ids = StockReservation.objects.filter(campaign=campaign, status="active", expires_at__lte=timezone.now()).values_list("item_id", flat=True).distinct()
+        for item in StockItem.objects.select_for_update().filter(pk__in=item_ids).order_by("pk"):
+            count += expire_item_reservations_locked(item)
+    messages.success(request, f"{count} reserva(s) vencida(s) liberada(s).")
+    return redirect("module_list", campaign_id=campaign_id, key="reservas")
 
 
 @login_required
@@ -527,6 +553,8 @@ def campaign_phase(request, campaign_id):
                 raise ValidationError("Informe o motivo da mudança de fase.")
             target = {"preparation": "operation", "operation": "closing", "closing": "archived"}[campaign.phase]
             if target == "archived":
+                if StockTransfer.objects.filter(campaign=campaign, status__in=["draft", "in_transit"]).exists():
+                    raise ValidationError("Conclua as transferências de materiais antes de arquivar a campanha.")
                 blockers = [not ClosureItem.objects.filter(campaign=campaign).exists(), ClosureItem.objects.filter(campaign=campaign, completed_at__isnull=True).exists(), Task.objects.filter(campaign=campaign).exclude(status__in=["completed", "cancelled"]).exists(), Obligation.objects.filter(campaign=campaign).exclude(approval_status__in=["cancelled", "rejected"]).annotate(paid=models.Sum("payment_allocations__amount_cents", filter=~models.Q(payment_allocations__payment__status="reversed"))).filter(models.Q(paid__isnull=True) | models.Q(paid__lt=models.F("amount_cents"))).exists(), StockReservation.objects.filter(campaign=campaign, status="active").exists(), AssetBooking.objects.filter(campaign=campaign, status__in=["reserved", "accepted"]).exists(), ServiceRequest.objects.filter(campaign=campaign).exclude(status="closed").exists(), Form.objects.filter(campaign=campaign, status="published").exists()]
                 if any(blockers):
                     raise ValidationError("Há pendências: confira checklist, tarefas, obrigações, reservas, custódias, atendimentos e formulários publicados.")

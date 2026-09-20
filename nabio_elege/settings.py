@@ -14,7 +14,9 @@ env = environ.Env(
     DEBUG=(bool, False)
 )
 # Read .env file if it exists
-environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+APP_ENV = os.environ.get('APP_ENV', 'development')
+if APP_ENV not in {'production', 'staging'}:
+    environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 # Quick-start development settings - unsuitable for production
 # SECURITY WARNING: keep the secret key used in production secret!
@@ -155,6 +157,10 @@ CELERY_BROKER_URL = env('REDIS_URL', default='redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = env('REDIS_URL', default='redis://localhost:6379/0')
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULE = {
+    'expire-stock-reservations': {
+        'task': 'workspace.expire_stock_reservations',
+        'schedule': 60.0,
+    },
     'dispatch-outbox': {
         'task': 'core.dispatch_outbox',
         'schedule': 5.0,
