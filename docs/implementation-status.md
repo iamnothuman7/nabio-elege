@@ -58,11 +58,25 @@ Os dados de demonstração não indicam candidatura, partido, número ou data el
 - Cada caso jurídico exige uma concessão além do papel da campanha. Administradores de acesso podem conceder/revogar, mas não remover o último administrador ativo. Documento associado a vários casos exige acesso a todos eles. A migration inicial preserva apenas autor/responsável ativos dos casos existentes; casos sem esses vínculos ficam inacessíveis até regularização administrativa revisada.
 - Instalação de produção usa `requirements-production.lock`, com 34 dependências fixadas (uma condicional para Windows), hashes de wheels do PyPI e proibição de builds de código-fonte. A CI recusa divergência entre entradas e lock.
 - CI ampliada com análise estática, formato dos novos módulos, auditoria de dependências, Gitleaks no histórico, compilação de templates, collectstatic e artefato de código por SHA após os testes. As únicas exceções do scanner são fingerprints históricos das chaves intencionais de teste/demo, nunca caminhos inteiros.
+- Todos os campos expostos pelos módulos têm rótulos explícitos em português; um teste impede a inclusão de campos sem tradução. A administração jurídica exige escolher a pessoa, sem selecionar um destinatário automaticamente.
+
+Validação local desta entrega: **123 testes, nenhum erro, dois testes concorrentes ignorados no SQLite**; 26 templates compilados; migrations aplicadas apenas à demonstração, após backup. A auditoria das dependências fixadas não encontrou vulnerabilidades conhecidas, e o scanner de segredos passou com as exceções históricas documentadas. Esses resultados são verificações pontuais, não uma certificação de segurança.
+
+O commit principal desta entrega é `b4a6270c1ecfc5959a16846abc376650017b757c`. O envio ao GitHub foi tentado, mas está bloqueado pela ausência de credencial de autenticação neste computador. **A nova CI ainda não foi executada e esta versão não foi validada no PostgreSQL.** Não houve alteração do banco, dos serviços ou da configuração de produção nesta etapa.
 
 Essas mudanças ainda precisam de revisão independente e staging completo. Controle por caso na aplicação não substitui RLS no PostgreSQL, que continua pendente.
+
+### Evidência da entrega anterior — não substitui a validação atual
 
 A continuação acrescentou 18 testes de distribuição/estoque, outro teste concorrente, seis testes de proteção de implantação e cinco verificações do provisionamento isolado. A falha anterior de PostgreSQL foi reproduzida e corrigida no encerramento do stream pelo cliente de testes. A versão `fae5f0b2569427251e154641fb30421dbfda60a3` passou nos 92 testes do QA PostgreSQL 14 e na [CI SQLite/PostgreSQL 14/PostgreSQL 15](https://github.com/iamnothuman7/nabio-elege/actions/runs/35541254447). Os dois testes concorrentes são ignorados somente na combinação SQLite.
 
 O roteiro adaptado e as evidências públicas estão em `producao.md`. O inventário e o detalhamento operacional permanecem fora do Git. A restauração de schema/dados sintéticos de QA foi verificada em banco novo; não equivale à recuperação completa de produção. Não há serviço público do Nabio Elege ativado.
 
 Há testes automatizados para páginas dos módulos, isolamento, permissões, aprovação independente, idempotência, versões concorrentes, estoque, compras, finanças, formulários, documentos, MFA, mapas e cadastros voluntários. As verificações de antivírus em testes usam simulação; é necessário testar uma instalação real. A interface e os tiles foram conferidos em navegador desktop e em viewport móvel. Revisão independente, staging, homologação de segurança e demais critérios das regras de produção continuam necessários; testes verdes não certificam o sistema inteiro.
+
+## Próximas etapas, na ordem de liberação
+
+1. Autenticar o GitHub, enviar a branch e validar a CI desta versão em SQLite/PostgreSQL 14/PostgreSQL 15; abrir PR para revisor independente identificado pelo responsável do projeto.
+2. Completar RLS e demais lacunas de segurança, privacidade e regras de negócio relacionadas acima; registrar os critérios de aceite e as evidências por módulo.
+3. Provisionar e homologar staging isolado, inclusive antivírus real, filas, arquivos privados, recuperação integral e rollback. A evidência anterior de banco sintético não cobre esse aceite.
+4. Obter a aprovação exigida, confirmar domínio e recursos exclusivos e só então realizar a implantação de produção. Nenhum serviço de outro projeto pode ser alterado por essa entrega.

@@ -9,6 +9,14 @@ from infra.check_dependency_lock import OPTIONS, verify_lock
 
 
 class ReleaseValidationTests(SimpleTestCase):
+    def test_all_module_fields_have_explicit_portuguese_labels(self):
+        from apps.workspace.registry import LABELS, MODULES
+
+        fields = {
+            field for module in MODULES for field in module.fields + module.columns
+        }
+        self.assertEqual(fields - LABELS.keys(), set())
+
     def test_project_lock_matches_inputs(self):
         from django.conf import settings
 

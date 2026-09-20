@@ -11,7 +11,7 @@
 </section>
 {% if writable %}<section class="panel padded section-gap"><h2>Conceder ou atualizar acesso</h2>
 <form method="post">{% csrf_token %}<input type="hidden" name="action" value="grant"><input type="hidden" name="row_version" value="{{ case.row_version }}">
-<label>Integrante autorizado<select name="membership" required>{% for member in case_members %}<option value="{{ member.id }}">{{ member.user.username }}</option>{% endfor %}</select></label>
+<label>Integrante autorizado<select name="membership" required><option value="">Selecione uma pessoa</option>{% for member in case_members %}<option value="{{ member.id }}">{{ member.user.username }}</option>{% endfor %}</select></label>
 <label><input type="checkbox" name="can_manage"> Pode administrar os acessos deste caso</label>
 <label>Motivo administrativo, sem dados do caso<textarea name="reason" required minlength="3" maxlength="500" rows="3"></textarea></label>
 <button class="button" type="submit">Salvar concessão</button></form></section>{% endif %}

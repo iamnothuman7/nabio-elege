@@ -7,7 +7,7 @@ from django.template.loader import get_template
 
 
 class Command(BaseCommand):
-    help = "Compila todos os templates do projeto e recusa erros de sintaxe ou dependências ausentes."
+    help = "Compila todos os templates do projeto e recusa erros de sintaxe."
 
     def handle(self, *args, **options):
         count = 0
