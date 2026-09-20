@@ -1,0 +1,29 @@
+from django.urls import path
+
+from . import auth_views, form_views, political_views, views
+
+urlpatterns = [
+    path("", views.home, name="home"),
+    path("entrar/", auth_views.login_view, name="login"),
+    path("sair/", auth_views.logout_view, name="logout"),
+    path("seguranca/", auth_views.security_view, name="security"),
+    path("convite/", auth_views.accept_invitation, name="accept_invitation"),
+    path("f/<str:public_code>/", form_views.public_form_view, name="public_form"),
+    path("c/<uuid:campaign_id>/", political_views.political_dashboard, name="dashboard"),
+    path("c/<uuid:campaign_id>/mapa/", political_views.campaign_map, name="campaign_map"),
+    path("c/<uuid:campaign_id>/operacao/", views.dashboard, name="operations_dashboard"),
+    path("c/<uuid:campaign_id>/equipe/", views.team, name="team"),
+    path("c/<uuid:campaign_id>/auditoria/", views.audit_log, name="audit_log"),
+    path("c/<uuid:campaign_id>/relatorios/", views.reports, name="reports"),
+    path("c/<uuid:campaign_id>/fase/", views.campaign_phase, name="campaign_phase"),
+    path("c/<uuid:campaign_id>/contabilidade/<uuid:object_id>/exportar/", views.accounting_export, name="accounting_export"),
+    path("c/<uuid:campaign_id>/estoque/movimentar/", views.stock_movement, name="stock_movement"),
+    path("c/<uuid:campaign_id>/documentos/<uuid:object_id>/<uuid:version_id>/baixar/", views.document_download, name="document_download"),
+    path("c/<uuid:campaign_id>/documentos/<uuid:object_id>/analisar/", views.document_rescan, name="document_rescan"),
+    path("c/<uuid:campaign_id>/formularios/<uuid:object_id>/construir/", form_views.form_builder, name="form_builder"),
+    path("c/<uuid:campaign_id>/m/<slug:key>/", views.module_list, name="module_list"),
+    path("c/<uuid:campaign_id>/m/<slug:key>/novo/", views.module_edit, name="module_create"),
+    path("c/<uuid:campaign_id>/m/<slug:key>/<uuid:object_id>/", views.module_detail, name="module_detail"),
+    path("c/<uuid:campaign_id>/m/<slug:key>/<uuid:object_id>/editar/", views.module_edit, name="module_edit"),
+    path("c/<uuid:campaign_id>/m/<slug:key>/<uuid:object_id>/acao/", views.module_action, name="module_action"),
+]

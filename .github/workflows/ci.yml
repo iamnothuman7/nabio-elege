@@ -8,6 +8,25 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        settings: [test_settings, postgres_test_settings]
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: nabio_test
+          POSTGRES_USER: nabio_test
+          POSTGRES_PASSWORD: ci-only-test-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nabio_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://nabio_test:ci-only-test-password@127.0.0.1:5432/nabio_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -16,6 +35,6 @@ jobs:
           cache: pip
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -r requirements.txt
-      - run: python manage.py check --settings=nabio_elege.test_settings
-      - run: python manage.py makemigrations --check --dry-run --settings=nabio_elege.test_settings
-      - run: python manage.py test --settings=nabio_elege.test_settings
+      - run: python manage.py check --settings=nabio_elege.${{ matrix.settings }}
+      - run: python manage.py makemigrations --check --dry-run --settings=nabio_elege.${{ matrix.settings }}
+      - run: python manage.py test --settings=nabio_elege.${{ matrix.settings }}

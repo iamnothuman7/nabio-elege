@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -53,8 +53,11 @@ def add_task_dependency(*, actor, task_id, depends_on_id):
 def apply_stock_movement(
     *, actor, item_id, warehouse_id, kind, quantity, reason, origin_type="", origin_id=None
 ):
-    quantity = Decimal(str(quantity))
-    if quantity <= 0:
+    try:
+        quantity = Decimal(str(quantity))
+    except InvalidOperation:
+        raise ValidationError("Quantidade inválida.")
+    if not quantity.is_finite() or quantity <= 0 or quantity >= Decimal("100000000000000") or quantity != quantity.quantize(Decimal("0.0001")):
         raise ValidationError("A quantidade deve ser positiva.")
     item = (
         StockItem.objects.select_for_update()

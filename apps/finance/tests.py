@@ -121,6 +121,8 @@ class FinancialIntegrityTests(TestCase):
             )
 
     def test_payment_allocation_uses_remaining_balances(self):
+        submitted = submit_obligation(actor=self.creator, obligation_id=self.obligation.pk, expected_version=self.obligation.row_version)
+        decide_obligation(actor=self.approver, obligation_id=submitted.pk, expected_version=submitted.row_version, decision="approved", reason="Conferência independente")
         payment = PaymentRecord.objects.create(
             tenant=self.tenant,
             campaign=self.campaign,

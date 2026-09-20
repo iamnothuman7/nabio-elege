@@ -2,7 +2,7 @@ import uuid
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 
 
@@ -42,9 +42,23 @@ class CampaignScopedModel(UUIDTimeStampedModel):
                 raise ValidationError(
                     {"campaign": "A campanha deve pertencer à organização informada."}
                 )
+        for field in self._meta.fields:
+            if not isinstance(field, models.ForeignKey) or field.name in {"campaign", "tenant", "created_by"}:
+                continue
+            if not getattr(self, field.attname):
+                continue
+            related = getattr(self, field.name)
+            if hasattr(related, "campaign_id") and related.campaign_id != self.campaign_id:
+                raise ValidationError({field.name: "O registro deve pertencer à mesma campanha."})
+            if hasattr(related, "tenant_id") and related.tenant_id != self.tenant_id:
+                raise ValidationError({field.name: "O registro deve pertencer à mesma organização."})
 
+    @transaction.atomic
     def save(self, *args, **kwargs):
         if not self._state.adding:
+            current = type(self).objects.select_for_update().only("row_version").get(pk=self.pk)
+            if current.row_version != self.row_version:
+                raise ValidationError("Este registro foi alterado por outra pessoa. Recarregue a página.")
             self.row_version += 1
             if kwargs.get("update_fields") is not None:
                 kwargs["update_fields"] = set(kwargs["update_fields"]) | {
@@ -53,6 +67,13 @@ class CampaignScopedModel(UUIDTimeStampedModel):
                 }
         self.full_clean()
         return super().save(*args, **kwargs)
+
+    def __str__(self):
+        for name in ("title", "name", "display_name", "description", "external_reference", "protocol", "code"):
+            value = getattr(self, name, None)
+            if value:
+                return str(value)[:100]
+        return str(self.pk)[:8]
 
 
 class RetentionPolicy(UUIDTimeStampedModel):
@@ -82,7 +103,16 @@ class RetentionPolicy(UUIDTimeStampedModel):
         return f"{self.tenant}: {self.name}"
 
 
+class ImmutableAuditQuerySet(models.QuerySet):
+    def update(self, **kwargs):
+        raise ValidationError("Eventos de auditoria são imutáveis.")
+
+    def delete(self):
+        raise ValidationError("Eventos de auditoria não podem ser excluídos.")
+
+
 class AuditEvent(models.Model):
+    objects = ImmutableAuditQuerySet.as_manager()
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     tenant = models.ForeignKey(
         "campaigns.Tenant", on_delete=models.PROTECT, null=True, blank=True

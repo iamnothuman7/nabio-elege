@@ -106,6 +106,8 @@ class Form(CampaignScopedModel):
                 raise ValidationError(
                     {"purpose": "A finalidade deve pertencer à mesma campanha."}
                 )
+        if self.current_version_id and self.current_version.form_id != self.pk:
+            raise ValidationError({"current_version": "A versão deve pertencer a este formulário."})
         if self.opens_at and self.closes_at and self.opens_at >= self.closes_at:
             raise ValidationError({"closes_at": "O encerramento deve ocorrer após a abertura."})
 
@@ -119,6 +121,7 @@ class FormVersion(UUIDTimeStampedModel):
         RETIRED = "retired", "Desativada"
 
     form = models.ForeignKey(Form, on_delete=models.PROTECT, related_name="versions")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="authored_form_versions")
     version_number = models.PositiveIntegerField()
     schema_json = models.JSONField()
     schema_hash = models.CharField(max_length=64)
@@ -225,6 +228,8 @@ class Submission(CampaignScopedModel):
             raise ValidationError(
                 {"assisted_by_membership": "O modo direto não pode atribuir um agente."}
             )
+        if self.source_link_id and self.source_link.form_id != self.form_version.form_id:
+            raise ValidationError({"source_link": "O link pertence a outro formulário."})
 
 
 class SubmissionReceipt(UUIDTimeStampedModel):

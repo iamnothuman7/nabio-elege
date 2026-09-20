@@ -6,19 +6,19 @@ from .models import Campaign, Membership
 
 
 def active_memberships(user):
-    if not user.is_authenticated:
+    if not user.is_authenticated or not user.is_active:
         return Membership.objects.none()
     return Membership.objects.filter(
         user=user,
         status=Membership.Status.ACTIVE,
+        revoked_at__isnull=True,
+        tenant__status="active",
     ).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now()))
 
 
 def campaigns_for_user(user):
     if not user.is_authenticated:
         return Campaign.objects.none()
-    if user.is_superuser:
-        return Campaign.objects.all()
     return Campaign.objects.filter(memberships__in=active_memberships(user)).distinct()
 
 
@@ -35,8 +35,6 @@ def membership_for(user, campaign):
 
 
 def has_campaign_permission(user, campaign, permission_code):
-    if user.is_authenticated and user.is_superuser:
-        return True
     membership = membership_for(user, campaign)
     if membership is None:
         return False
@@ -44,8 +42,8 @@ def has_campaign_permission(user, campaign, permission_code):
 
 
 def require_campaign_permission(user, campaign, permission_code):
-    if user.is_authenticated and user.is_superuser:
-        return None
+    if campaign.phase == "archived" and not any(part in permission_code for part in (".read", ".export.", ".download.", "privacy.handle")):
+        raise PermissionDenied("A campanha arquivada está em modo somente leitura.")
     membership = membership_for(user, campaign)
     if membership is None or not membership.role.permissions.filter(
         code=permission_code

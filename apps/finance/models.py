@@ -186,7 +186,7 @@ class PaymentAllocation(UUIDTimeStampedModel):
                 errors["amount_cents"] = "A alocação supera o valor disponível do pagamento."
             other_obligation_allocations = self.obligation.payment_allocations.exclude(
                 pk=self.pk
-            ).aggregate(total=models.Sum("amount_cents"))["total"] or 0
+            ).exclude(payment__status="reversed").aggregate(total=models.Sum("amount_cents"))["total"] or 0
             if other_obligation_allocations + self.amount_cents > self.obligation.amount_cents:
                 errors["amount_cents"] = "A alocação supera o saldo da obrigação."
         if errors:
@@ -295,6 +295,7 @@ class AccountingBatch(CampaignScopedModel):
 
     cutoff_at = models.DateTimeField()
     manifest_hash = models.CharField(max_length=64)
+    manifest_json = models.JSONField(default=dict, blank=True)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.BUILDING)
 
 

@@ -17,3 +17,5 @@ tmp/
 # OS
 .DS_Store
 Thumbs.db
+demo.sqlite3
+demo.sqlite3-*

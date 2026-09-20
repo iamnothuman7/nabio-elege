@@ -17,7 +17,8 @@ def claim_outbox_event(event_id):
     event = OutboxEvent.objects.select_for_update().filter(pk=event_id).first()
     if event is None:
         return None
-    if event.status != OutboxEvent.Status.PENDING or event.available_at > timezone.now():
+    stale_claim = event.status == OutboxEvent.Status.PROCESSING and event.updated_at < timezone.now() - timedelta(minutes=5)
+    if (event.status != OutboxEvent.Status.PENDING and not stale_claim) or event.available_at > timezone.now():
         return None
     event.status = OutboxEvent.Status.PROCESSING
     event.attempts += 1

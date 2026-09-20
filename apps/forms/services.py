@@ -4,6 +4,7 @@ from datetime import timedelta
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
+from django.utils.crypto import salted_hmac
 
 from apps.campaigns.services import membership_for, require_campaign_permission
 from apps.core.crypto import derive_receipt_token, encrypt_json, hash_token
@@ -17,6 +18,7 @@ from apps.core.services import (
 from .models import (
     Form,
     FormVersion,
+    Manifestation,
     PrivacyNoticeVersion,
     ProcessingPurpose,
     Submission,
@@ -92,7 +94,7 @@ def receive_assisted_submission(
 
     form = (
         Form.objects.select_for_update()
-        .select_related("campaign", "tenant", "current_version", "purpose")
+        .select_related("campaign", "tenant", "purpose")
         .get(pk=form_id)
     )
     membership = require_campaign_permission(
@@ -104,6 +106,9 @@ def receive_assisted_submission(
         raise ValidationError("O modo assistido exige vínculo ativo com a campanha.")
     if form.status != Form.Status.PUBLISHED or not form.current_version_id:
         raise ValidationError("O formulário não está publicado.")
+    now = timezone.now()
+    if (form.opens_at and form.opens_at > now) or (form.closes_at and form.closes_at <= now) or form.campaign.phase in {"closing", "archived"}:
+        raise ValidationError("O formulário está fora do período de recebimento.")
     if str(form.current_version_id) != str(version_id):
         raise PublicFormVersionConflict
 
@@ -112,9 +117,9 @@ def receive_assisted_submission(
     route = f"/v1/campaigns/{form.campaign_id}/forms/{form.id}/assisted-submissions"
     actor_scope = f"membership:{membership.id}"
     key_hash = hashlib.sha256(idempotency_key.encode("utf-8")).hexdigest()
-    request_hash = canonical_json_hash(
+    request_hash = salted_hmac("submission-idempotency", canonical_json_hash(
         {"version_id": str(version_id), "fields": fields}
-    )
+    ), algorithm="sha256").hexdigest()
     existing = IdempotencyRecord.objects.filter(
         campaign=form.campaign,
         actor_scope=actor_scope,
@@ -142,6 +147,7 @@ def receive_assisted_submission(
         assisted_by_membership=membership,
         payload_ciphertext=encrypt_json(fields),
     )
+    Manifestation.objects.create(tenant=form.tenant, campaign=form.campaign, created_by=actor, submission=submission, purpose=form.purpose, notice_version=version.notice_version, choice="granted" if fields.get("consent") is True else "denied", method="assisted_pending_confirmation", confirmed_at=None)
     receipt_id = opaque_code()
     receipt_token = derive_receipt_token(receipt_id)
     SubmissionReceipt.objects.create(

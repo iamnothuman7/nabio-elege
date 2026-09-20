@@ -1,10 +1,12 @@
 import hashlib
+import re
 from datetime import timedelta
 
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
 from django.db import transaction
 from django.utils import timezone
+from django.utils.crypto import salted_hmac
 
 from apps.core.crypto import derive_receipt_token, encrypt_json, hash_token
 from apps.core.models import IdempotencyRecord
@@ -14,7 +16,7 @@ from apps.core.services import (
     enqueue_outbox_event,
 )
 
-from .models import Form, FormVersion, SourceLink, Submission, SubmissionReceipt, opaque_code
+from .models import Form, FormVersion, Manifestation, SourceLink, Submission, SubmissionReceipt, opaque_code
 
 
 class PublicFormUnavailable(Exception):
@@ -43,6 +45,8 @@ SUPPORTED_FIELD_TYPES = {
 def _published_context(source_link):
     form = source_link.form
     now = timezone.now()
+    if form.campaign.tenant.status != "active" or form.campaign.phase in {"closing", "archived"} or form.purpose.status != "active":
+        raise PublicFormUnavailable
     if not source_link.is_active:
         raise PublicFormUnavailable
     if form.status != Form.Status.PUBLISHED or not form.current_version_id:
@@ -85,7 +89,7 @@ def validate_submission_fields(*, version, fields):
 
     unknown = sorted(set(fields) - set(definitions))
     if unknown:
-        raise ValidationError({"fields": [f"Campo não permitido: {name}" for name in unknown]})
+        raise ValidationError({"fields": "O envio contém campos não permitidos."})
 
     errors = {}
     for name, definition in definitions.items():
@@ -101,8 +105,10 @@ def validate_submission_fields(*, version, fields):
                 errors.setdefault(name, []).append("Informe um texto válido.")
                 continue
             limits = {"short_text": 150, "long_text": 2000, "email": 254, "phone": 32}
-            if len(value) > definition.get("max_length", limits[field_type]):
+            if len(value) > min(definition.get("max_length", limits[field_type]), limits[field_type]):
                 errors.setdefault(name, []).append("O valor excede o limite permitido.")
+            if field_type == "phone" and not re.fullmatch(r"\+[1-9][0-9]{7,14}", value):
+                errors.setdefault(name, []).append("Use o formato internacional, como +5585999999999.")
             if field_type == "email":
                 try:
                     validate_email(value)
@@ -115,8 +121,11 @@ def validate_submission_fields(*, version, fields):
                 errors.setdefault(name, []).append("Escolha uma opção permitida.")
         elif field_type == "multiple_choice":
             options = set(definition.get("options", []))
-            if not isinstance(value, list) or any(item not in options for item in value):
+            if not isinstance(value, list) or any(not isinstance(item, str) or item not in options for item in value):
                 errors.setdefault(name, []).append("Escolha apenas opções permitidas.")
+
+    if "adult_declaration" in definitions and fields.get("adult_declaration") is not True:
+        errors["adult_declaration"] = ["Este formulário atende somente pessoas com 18 anos ou mais."]
 
     if errors:
         raise ValidationError(errors)
@@ -133,12 +142,12 @@ def receive_public_submission(
 
     source_link = (
         SourceLink.objects.select_for_update()
-        .select_related("form__current_version__notice_version", "form__purpose")
         .filter(public_code=public_code)
         .first()
     )
     if source_link is None:
         raise PublicFormUnavailable
+    source_link.form = Form.objects.select_for_update().get(pk=source_link.form_id)
     current_version = _published_context(source_link)
     if str(current_version.id) != str(version_id):
         raise PublicFormVersionConflict
@@ -147,9 +156,9 @@ def receive_public_submission(
     route = f"/v1/public/forms/{public_code}/submissions"
     actor_scope = f"public-link:{source_link.id}"
     key_hash = hashlib.sha256(idempotency_key.encode("utf-8")).hexdigest()
-    request_hash = canonical_json_hash(
+    request_hash = salted_hmac("submission-idempotency", canonical_json_hash(
         {"version_id": str(version_id), "fields": fields}
-    )
+    ), algorithm="sha256").hexdigest()
     existing = IdempotencyRecord.objects.filter(
         campaign=source_link.campaign,
         actor_scope=actor_scope,
@@ -176,6 +185,7 @@ def receive_public_submission(
         capture_mode=Submission.CaptureMode.DIRECT,
         payload_ciphertext=encrypt_json(fields),
     )
+    Manifestation.objects.create(tenant=submission.tenant, campaign=submission.campaign, submission=submission, purpose=current_version.form.purpose, notice_version=current_version.notice_version, choice="granted" if fields.get("consent") is True else "denied", method="direct", confirmed_at=timezone.now() if fields.get("consent") is True else None)
     receipt_id = opaque_code()
     receipt_token = derive_receipt_token(receipt_id)
     SubmissionReceipt.objects.create(

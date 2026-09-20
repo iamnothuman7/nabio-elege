@@ -1,42 +1,54 @@
 # Estado de implementação
 
-Atualizado em 2026-09-19. “Parcial” significa que já há modelo ou fluxo testado, mas o módulo ainda não atende todos os requisitos e critérios de aceite da especificação v1.0.
+Atualizado em 2026-09-20. “Parcial” significa que há interface ou fluxo executável, mas o módulo ainda não atende todos os requisitos e critérios de aceite da especificação v1.0. A demonstração contém dados fictícios e não está homologada para produção.
 
 | Módulo | Estado | Entrega disponível |
 | --- | --- | --- |
-| M01 Campanhas e organizações | Parcial | Tenant, campanha, fase, vínculos e isolamento de API |
-| M02 Central de comando | Não iniciado | — |
-| M03 Projetos e tarefas | Parcial | Projetos, tarefas e bloqueio de dependências cíclicas |
-| M04 Financeiro e orçamento | Parcial | Orçamento, obrigação, aprovação segregada, pagamento e conciliação |
-| M05 Arrecadação | Parcial | Recebimentos financeiros e estimáveis separados no modelo |
-| M06 Contabilidade | Parcial | Lotes, manifesto e registro de entrega externa |
-| M07 Compras e fornecedores | Parcial | Solicitação, itens, fornecedor e pedido |
-| M08 Jurídico | Não iniciado | — |
-| M09 Calendário regulatório | Não iniciado | — |
-| M10 Estoque | Parcial | Saldos e movimentos transacionais sem saldo negativo |
-| M11 Patrimônio | Não iniciado | — |
-| M12 Logística | Não iniciado | — |
-| M13 Equipes | Parcial | Vínculos, papéis e expiração por campanha |
-| M14 Pessoas | Parcial | Pessoa e contatos cifrados, blind index e revisão de duplicidade |
-| M15 Agenda e eventos | Não iniciado | — |
-| M16 Resultados públicos | Não iniciado | — |
-| M17 Comunicação | Não iniciado | — |
-| M18 Estúdio | Não iniciado | — |
-| M19 Atendimento | Parcial | Protocolo e criação idempotente a partir de submissão |
-| M20 Propostas | Não iniciado | — |
-| M21 Documentos | Parcial | Quarentena, versões, hash e classificação |
-| M22 Dia da eleição | Não iniciado | — |
-| M23 Relatórios e auditoria | Parcial | Auditoria imutável e outbox/inbox |
-| M24 Encerramento | Não iniciado | — |
-| M25 Formulários por link | Parcial | Publicação imutável, links, envio público/assistido e validação |
+| M01 Campanhas e organizações | Parcial | Tenant, fases, vínculos, convites, MFA, isolamento e permissões explícitas |
+| M02 Central de comando | Parcial | Painel eleitoral, candidatura, territórios e mapa operacional interativo |
+| M03 Projetos e tarefas | Parcial | CRUD, dependências, evidência e transições de execução |
+| M04 Financeiro e orçamento | Parcial | Versões de orçamento, linhas, aprovação independente, obrigações, pagamentos, estornos e conciliação |
+| M05 Arrecadação | Parcial | Cadastro de recebimentos financeiros e estimáveis; regras completas pendentes |
+| M06 Contabilidade | Parcial | Manifesto com hash, revisão, exportação JSON e protocolo de entrega externa |
+| M07 Compras e fornecedores | Parcial | Itens, solicitação, pedido aprovado, obrigação canônica e recebimento parcial em estoque |
+| M08 Jurídico | Parcial | Casos, responsáveis e revisão; acesso ainda por campanha/papel, não por caso |
+| M09 Calendário regulatório | Parcial | Prazos e acompanhamento manual; sem sincronização normativa |
+| M10 Estoque | Parcial | Entradas/saídas transacionais, reservas, liberação e consumo sem saldo negativo |
+| M11 Patrimônio | Parcial | Bens e custódias com prevenção de conflito de período |
+| M12 Logística | Parcial | Viagens, responsáveis e prevenção de sobreposição de recursos |
+| M13 Equipes | Parcial | Papéis, revogação, cabos eleitorais, voluntários, treinamento, escalas e presença |
+| M14 Pessoas | Parcial | Contatos cifrados, cadastro voluntário de eleitores, finalidade, comprovação, responsável e revisão |
+| M15 Agenda e eventos | Parcial | Eventos e ações de rua por território/comitê, equipe necessária e checklist |
+| M16 Resultados públicos | Parcial | Importação CSV agregada com métricas permitidas, validação e rastreabilidade |
+| M17 Comunicação | Parcial | Conteúdo editorial, revisão segregada e referência da publicação externa |
+| M18 Estúdio | Parcial | Acervo de marca e revisão; pipeline completo de produção pendente |
+| M19 Atendimento | Parcial | Recepção pública/assistida, protocolo, responsável, acesso restrito e acompanhamento |
+| M20 Propostas | Parcial | Cadastro, responsável, prazo e revisão |
+| M21 Documentos | Parcial | Upload privado, validação de tipo, hash, ClamAV fail-closed e download autorizado |
+| M22 Dia da eleição | Parcial | Escalas, conflitos de horário e registro de ocorrências |
+| M23 Relatórios e auditoria | Parcial | CSV protegido contra fórmulas, auditoria de aplicação e outbox/inbox |
+| M24 Encerramento | Parcial | Checklist, bloqueios de fechamento e arquivo somente leitura; retenção integral pendente |
+| M25 Formulários por link | Parcial | Construtor controlado, versão/aviso, revisão independente, publicação, links, pausa e envio idempotente |
+
+## Escopo eleitoral implementado
+
+O cadastro de eleitores é voluntário e administrativo, não uma lista comprada nem uma base de intenção de voto. Os registros manuais entram pendentes, com finalidade e evidência; revisão não substitui a confirmação externa do canal. Nomes e contatos ficam cifrados e o acesso é limitado ao responsável ou a uma permissão global explícita da campanha. A busca exata de contato utiliza POST para não expor o dado em URLs.
+
+O mapa utiliza apenas comitês e outros pontos operacionais declarados públicos. Ele não mostra domicílios, contatos ou preferências individuais. Cabos eleitorais são gerenciados como equipe: vínculo operacional, território, base, treinamento e escala; não recebem perfis ou pontuações de persuasão de eleitores.
+
+Os dados de demonstração não indicam candidatura, partido, número ou data eleitoral reais. Fortaleza é uma região ilustrativa inicial, editável pelo usuário.
 
 ## Bloqueios para piloto com dados reais
 
-- MFA e fluxo completo de convite/recuperação;
-- armazenamento de objetos e antivírus para uploads;
-- PostgreSQL com RLS e testes reais de concorrência;
-- políticas de retenção aprovadas por jurídico e privacidade;
-- validação contábil das regras financeiras;
-- testes de carga, restauração, acessibilidade e segurança;
-- telas de operação além do Django Admin;
-- homologação dos dois ciclos completos descritos na especificação.
+- Provisionar HTTPS, segredos independentes, PostgreSQL, Redis, workers, armazenamento privado, backups e ClamAV real. A demonstração SQLite não serve como produção.
+- Implementar e homologar RLS no PostgreSQL; ampliar testes concorrentes. Há um teste concorrente de estoque e uma matriz CI PostgreSQL, não uma auditoria completa de concorrência.
+- Completar confirmação de canais, governança de finalidades, treinamento e direitos de privacidade; implementar retenção, bloqueio legal e descarte também em backups.
+- Homologar orçamento comprometido, alçadas, documentos obrigatórios, arrecadação, regras contábeis e formatos oficiais com responsáveis qualificados. Não há certificação ou transmissão ao TSE.
+- Completar ACL por caso jurídico, cotações, versionamento de dados bancários, transferências em trânsito e expiração automática de reservas.
+- Dimensionar mapas para o tráfego previsto e selecionar provedor de tiles apropriado; o mapa demonstrativo depende de serviços externos.
+- Concluir exportações assíncronas volumosas, armazenamento de auditoria externo e monitoramento operacional.
+- Executar testes de carga, restauração, segurança e acessibilidade e homologar os dois ciclos completos da especificação.
+
+## Evidências e limites da validação
+
+Há testes automatizados para páginas dos módulos, isolamento, permissões, aprovação independente, idempotência, versões concorrentes, estoque, compras, finanças, formulários, documentos, MFA, mapas e cadastros voluntários. As verificações de antivírus em testes usam simulação; é necessário testar uma instalação real. A interface e os tiles foram conferidos em navegador desktop e em viewport móvel. A execução local da suíte é SQLite; a execução PostgreSQL da CI precisa ser confirmada no ambiente correspondente.
