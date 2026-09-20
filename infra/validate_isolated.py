@@ -8,7 +8,6 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import pwd
 import re
 import secrets
 import shutil
@@ -26,7 +25,7 @@ ORIGIN = "https://github.com/iamnothuman7/nabio-elege.git"
 def plan(commit):
     if not re.fullmatch(r"[0-9a-f]{40}", commit):
         raise ValueError("A complete tested commit SHA is required")
-    return {"commit": commit, "root": str(ROOT), "account": ACCOUNT, "role": ROLE, "databases": DATABASES, "public_port": None}
+    return {"commit": commit, "root": ROOT.as_posix(), "account": ACCOUNT, "role": ROLE, "databases": DATABASES, "public_port": None}
 
 
 def run(args, **kwargs):
@@ -45,6 +44,7 @@ def provision(commit):
     state = plan(commit)
     if os.geteuid() != 0:
         raise RuntimeError("Administrative account required for isolated resource creation")
+    import pwd
     if ROOT.exists() or ROOT.is_symlink():
         raise RuntimeError("QA directory exists; inspect it instead of overwriting")
     try:
