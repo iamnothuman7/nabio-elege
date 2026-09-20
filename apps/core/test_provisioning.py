@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 from django.test import SimpleTestCase
 
-from infra.validate_isolated import plan, provision
+from infra.validate_isolated import plan, provision, validate_existing, validation_database
 
 
 class IsolatedProvisioningTests(SimpleTestCase):
@@ -22,3 +22,14 @@ class IsolatedProvisioningTests(SimpleTestCase):
             with self.assertRaises(RuntimeError):
                 provision("a" * 40)
         run.assert_not_called()
+
+    def test_revalidation_database_has_an_exclusive_bounded_name(self):
+        self.assertEqual(validation_database("a" * 40), "test_nabio_elege_qa_aaaaaaaaaaaa")
+        with self.assertRaises(ValueError):
+            validation_database("main; unsafe")
+
+    def test_non_admin_cannot_revalidate_existing_qa(self):
+        with patch("infra.validate_isolated.os.geteuid", return_value=1000, create=True), patch("infra.validate_isolated.postgres") as postgres:
+            with self.assertRaises(RuntimeError):
+                validate_existing("a" * 40)
+        postgres.assert_not_called()

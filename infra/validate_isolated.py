@@ -40,6 +40,65 @@ def postgres(sql):
     return result.stdout.strip()
 
 
+def validation_database(commit):
+    plan(commit)
+    return "test_nabio_elege_qa_" + commit[:12]
+
+
+def validate_existing(commit):
+    """Validate a new immutable revision without reusing or deleting test data."""
+    plan(commit)
+    if os.geteuid() != 0:
+        raise RuntimeError("Administrative account required for an exclusive test database")
+    import pwd
+    from urllib.parse import urlsplit
+
+    account = pwd.getpwnam(ACCOUNT)
+    if ROOT.is_symlink() or ROOT.resolve() != ROOT or ROOT.stat().st_uid != 0:
+        raise RuntimeError("Unexpected QA directory ownership or target")
+    credentials = ROOT / "shared/qa-environment.json"
+    if credentials.is_symlink() or credentials.resolve().parent != ROOT / "shared":
+        raise RuntimeError("Unexpected QA configuration target")
+    if credentials.stat().st_uid != account.pw_uid or credentials.stat().st_mode & 0o077:
+        raise RuntimeError("QA credentials must be private and owned by the QA account")
+    environment = json.loads(credentials.read_text())
+    if set(environment) != {"SECRET_KEY", "TEST_DATABASE_URL", "PYTHONUNBUFFERED", "PYTHONDONTWRITEBYTECODE"}:
+        raise RuntimeError("Unexpected QA environment fields")
+    connection = urlsplit(environment["TEST_DATABASE_URL"])
+    if (connection.scheme, connection.hostname, connection.port, connection.username, connection.path) != ("postgresql", "127.0.0.1", 5432, ROLE, "/nabio_elege_qa"):
+        raise RuntimeError("QA database target mismatch")
+    privileges = postgres("SELECT rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls FROM pg_roles WHERE rolname='nabio_elege_qa';")
+    if privileges != "f":
+        raise RuntimeError("Unexpected QA role privileges")
+    database = validation_database(commit)
+    release = ROOT / "releases" / commit
+    if release.exists() or release.is_symlink() or postgres(f"SELECT datname FROM pg_database WHERE datname='{database}';"):
+        raise RuntimeError("Validation revision already exists; preserve it and inspect")
+
+    # Only new, strictly generated QA identifiers are accepted here.
+    postgres(f"CREATE DATABASE {database} OWNER {ROLE};")
+    postgres(f"REVOKE ALL ON DATABASE {database} FROM PUBLIC; GRANT CONNECT ON DATABASE {database} TO {ROLE};")
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    backup = ROOT / "shared/backups" / f"{database}-{stamp}.dump"
+    with os.fdopen(os.open(backup, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600), "wb") as output:
+        run(["runuser", "-u", "postgres", "--", "pg_dump", "--format=custom", "--no-owner", "--no-privileges", database], stdout=output, stderr=subprocess.PIPE)
+    run(["pg_restore", "--list", str(backup)], capture_output=True)
+    print(json.dumps({"backup_before_test_migrations": {"database": database, "file": str(backup), "bytes": backup.stat().st_size, "sha256": hashlib.sha256(backup.read_bytes()).hexdigest()}}), flush=True)
+    run(["git", "clone", "--no-checkout", ORIGIN, str(release)], timeout=120, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    run(["git", "-C", str(release), "checkout", "--detach", commit], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    actual = run(["git", "-C", str(release), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+    if actual != commit:
+        raise RuntimeError("Release hash mismatch")
+    command = ["runuser", "-u", ACCOUNT, "--", str(ROOT / "venv/bin/python")]
+    run([*command, "-m", "pip", "install", "--disable-pip-version-check", "--no-cache-dir", "-r", str(release / "requirements-production.txt")], timeout=600)
+    env = {**os.environ, **environment, "TEST_DATABASE_NAME": database}
+    env.pop("APP_ENV", None)
+    print(json.dumps({"step": "postgresql-tests", "commit": commit, "database": database, "destructive_drop": False}), flush=True)
+    result = subprocess.run([*command, "manage.py", "test", "--keepdb", "--noinput", "--settings=nabio_elege.postgres_test_settings"], cwd=release, env=env, timeout=600)
+    print(json.dumps({"test_exit_code": result.returncode, "public_services_created": False}), flush=True)
+    return result.returncode
+
+
 def provision(commit):
     state = plan(commit)
     if os.geteuid() != 0:
@@ -116,9 +175,10 @@ def provision(commit):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--commit", required=True)
+    parser.add_argument("--existing", action="store_true", help="Validate a new revision in the previously provisioned exclusive QA environment")
     args = parser.parse_args()
     try:
-        sys.exit(provision(args.commit))
+        sys.exit(validate_existing(args.commit) if args.existing else provision(args.commit))
     except Exception as exc:
         # Do not dump environment, SQL, credentials or arbitrary provider messages.
         print(json.dumps({"status": "failed", "error_type": type(exc).__name__, "instruction": "Inspect the exclusive QA resources; do not delete or blindly rerun"}), flush=True)

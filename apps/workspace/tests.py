@@ -234,7 +234,10 @@ class WorkspaceTests(TestCase):
             url = reverse("document_download", args=[self.campaign.pk, doc.pk, version.pk])
             response = self.client.get(url)
             self.assertEqual(response.status_code, 200)
-            response.close()
+            # Consume through Django's test-client iterator so request_finished
+            # doesn't close PostgreSQL's enclosing TestCase transaction.
+            self.assertEqual(b"".join(response.streaming_content), b"%PDF-1.4\nTest")
+            self.assertTrue(response.closed)
             self.member.revoke()
             self.assertEqual(self.client.get(url).status_code, 404)
 
