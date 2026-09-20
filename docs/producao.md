@@ -65,6 +65,17 @@ Manter a release anterior e registrar o destino de `current` antes da ativação
 
 ## Estado desta preparação
 
-Não há declaração de publicação concluída. A CI anterior de PostgreSQL apresentou falha e precisa ser corrigida. Aprovação, staging completo, lock com hashes, restauração, TLS, antivírus e infraestrutura exclusiva precisam de evidências antes de go-live. As pendências funcionais constam em `implementation-status.md`.
+Não há declaração de publicação concluída. A falha anterior de PostgreSQL foi reproduzida e corrigida: o teste de download fechava a resposta diretamente, encerrando a conexão da transação de teste; agora consome e verifica o stream pelo cliente de testes do Django.
+
+Evidências de 2026-09-20 para `fae5f0b2569427251e154641fb30421dbfda60a3`:
+
+- [CI aprovada nas três combinações](https://github.com/iamnothuman7/nabio-elege/actions/runs/35541254447): SQLite/Python 3.11, PostgreSQL 14/Python 3.12 e PostgreSQL 15/Python 3.12. A suíte tem 92 testes; os dois testes concorrentes são exclusivos de PostgreSQL.
+- QA PostgreSQL: os 92 testes passaram, sem skips. A validação permaneceu isolada e sem publicação pública da aplicação; os detalhes operacionais estão exclusivamente no registro privado.
+- O ensaio de backup/restauração em QA passou. Trata-se de schema/dados sintéticos, não de recuperação integral de produção, arquivos privados, segredos ou cópia externa. Caminhos, tamanhos, checksums e inventário não são publicados neste relatório.
+- A demonstração local recebeu a migration 0005 após backup próprio. Nenhum banco preexistente foi apagado ou sobrescrito. Os auxiliares temporários de autenticação foram removidos após o uso.
+
+`infra/validate_isolated.py --commit <sha-completo>` provisiona QA uma única vez. `--existing` valida outra revisão em um banco novo por SHA, recusando alvos existentes e preservando evidências; não usar como ferramenta de produção. O script deliberadamente não apaga bancos de testes.
+
+A branch `codex/inventory-production-readiness` está publicada. O PR ainda precisa ser aberto e aprovado por revisor independente; push e CI não equivalem a aprovação. Staging completo, lock com hashes, scanners de dependências/segredos, validação de formato/assets, restauração completa, rollback, TLS, antivírus, monitoramento e infraestrutura exclusiva de produção continuam pendentes. As pendências funcionais constam em `implementation-status.md`.
 
 Referência: [checklist oficial de deployment do Django](https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/).
