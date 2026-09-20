@@ -32,6 +32,11 @@ Use apenas a demonstração local e dados fictícios até concluir os bloqueios 
 
 - Executar suíte SQLite e PostgreSQL e verificar resultado da CI.
 - Exigir MFA no perfil normal; testar replay TOTP, recuperação, revogação de sessões e limitação de login.
+- Criar operador sintético com permissões explícitas; conferir recusa de alvos existentes, ausência de superusuário e troca obrigatória antes do MFA/acesso às campanhas.
+- Trocar senha com confirmação da senha atual e segundo fator; comprovar encerramento das demais sessões e bloqueio após tentativas repetidas.
+- Criar caso jurídico, autorizar um revisor e manter outro integrante sem concessão. Conferir listas, acesso direto, ações, documentos, ocorrências, seletores e auditoria; repetir após revogação e expiração do vínculo.
+- Associar documento a dois casos e confirmar que acesso a apenas um não autoriza o download. Recusar remoção do último administrador ativo do caso.
+- Instalar com o lock de hashes; conferir divergência de pins, compilação de templates, collectstatic, Gitleaks, auditoria de dependências e artefato por SHA na CI.
 - Testar campanhas distintas, vínculos expirados, usuário suspenso e superusuário sem vínculo explícito.
 - Verificar que arquivo de campanha bloqueia escrita e que pendências impedem fechamento.
 - Homologar RLS, concorrência de todos os fluxos críticos, política de dados, backups/restauração, alçadas e documentos contábeis.

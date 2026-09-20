@@ -67,7 +67,9 @@ class Command(BaseCommand):
         for title, days, location in [("Encontro de alinhamento da equipe", 2, "Sala de reuniões · escritório"), ("Oficina de processos administrativos", 5, "Espaço de formação · demonstração")]:
             CampaignEvent.objects.create(**scope, title=title, starts_at=now + timedelta(days=days), ends_at=now + timedelta(days=days, hours=2), location=location, capacity=35, accessibility_plan="Acesso sem degraus, materiais digitais acessíveis e assentos reservados.", responsible=reviewer_member)
         Asset.objects.create(**scope, name="Notebook de apoio", inventory_code="PAT-001", ownership="owned", description="Equipamento fictício para controle de custódia.")
-        LegalCase.objects.create(**scope, title="Revisão dos termos de contratação", case_type="Consultivo", responsible=reviewer_member, due_at=now + timedelta(days=3))
+        case = LegalCase.objects.create(**scope, title="Revisão dos termos de contratação", case_type="Consultivo", responsible=reviewer_member, due_at=now + timedelta(days=3))
+        from apps.workspace.legal_access import initialize_case_access
+        initialize_case_access(case, case.created_by)
         EditorialContent.objects.create(**scope, title="Comunicado de horário do atendimento", channel="Site institucional", body="O atendimento administrativo estará disponível no horário informado pela equipe responsável.", rights_reference="Texto original da demonstração", planned_at=now + timedelta(days=4))
         Proposal.objects.create(**scope, title="Acessibilidade dos serviços administrativos", policy_area="Administração", statement_type="commitment", methodology="Proposta fictícia para demonstrar revisão e rastreabilidade.")
         ElectionShift.objects.create(**scope, title="Suporte administrativo · turno da manhã", location="Base administrativa fictícia", starts_at=now + timedelta(days=15), ends_at=now + timedelta(days=15, hours=4), responsible=member, checklist="Conferir equipe, recursos disponíveis e canal de ocorrências.")

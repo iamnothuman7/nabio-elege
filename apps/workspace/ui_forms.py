@@ -32,6 +32,9 @@ class ScopedModelForm(forms.ModelForm):
                 if model is Document:
                     classifications = ["internal"] + [value for value in ["personal", "financial", "legal"] if has_campaign_permission(actor, campaign, f"documents.read_{value}.campaign")]
                     field.queryset = field.queryset.filter(status="available", classification__in=classifications)
+                if issubclass(model, CampaignScopedModel):
+                    from .legal_access import restrict_queryset
+                    field.queryset = restrict_queryset(field.queryset, actor, campaign)
             if isinstance(field, forms.DateTimeField):
                 field.widget = forms.DateTimeInput(format="%Y-%m-%dT%H:%M", attrs={"type": "datetime-local"})
                 field.input_formats = ["%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S"]

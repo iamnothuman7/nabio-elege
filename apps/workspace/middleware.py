@@ -32,7 +32,14 @@ class AccessSecurityMiddleware:
             if stamp != profile.session_version or not request.user.is_active:
                 logout(request)
                 return redirect("login")
-            exempt = request.path in {"/seguranca/", "/sair/", "/entrar/"} or request.path.startswith("/f/") or request.path.startswith("/api/v1/public/") or request.path == "/api/healthz"
+            public_path = request.path.startswith("/f/") or request.path.startswith("/api/v1/public/") or request.path == "/api/healthz"
+            if profile.password_change_required and request.path not in {"/senha/", "/sair/", "/entrar/"} and not public_path:
+                if request.path.startswith("/api/"):
+                    return JsonResponse({"code": "password_change_required", "detail": "Troque a senha inicial antes de continuar."}, status=403)
+                return redirect("password_change")
+            # The password-change view verifies both the current password and
+            # a fresh second factor itself when MFA is already enabled.
+            exempt = request.path in {"/seguranca/", "/senha/", "/sair/", "/entrar/"} or public_path
             if (settings.MFA_REQUIRED or profile.enabled_at) and not exempt:
                 if not profile.enabled_at or request.session.get("mfa_version") != profile.session_version:
                     if request.path.startswith("/api/"):

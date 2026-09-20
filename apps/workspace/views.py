@@ -29,7 +29,8 @@ from apps.operations.services import apply_stock_movement
 from .document_services import private_storage, require_document_access, rescan_document, upload_document
 from .models import AssetBooking, ClosureItem, EditorialContent, Invitation, OfficialDataset, Reviewable, StockReservation
 from .models import ElectorRegistration, FieldActivity, FieldAssignment, FieldWorker
-from .models import StockTransfer
+from .models import StockTransfer, LegalCase
+from .legal_access import restrict_queryset, require_object_access, initialize_case_access, can_manage_access, visible_audit_events
 from .registry import LABELS, MODULES, REGISTRY
 from .services import audit, can_edit, check_version, execute_action, import_aggregate_csv, prepare_create, require_writable, validate_booking
 from .ui_forms import model_form_class
@@ -71,7 +72,7 @@ def scoped_queryset(config, context):
     if config.model is Document:
         classes = ["internal"] + [c for c in ["personal", "financial", "legal"] if f"documents.read_{c}.campaign" in context["permissions"]]
         qs = qs.filter(classification__in=classes)
-    return qs
+    return restrict_queryset(qs, context["member"].user, context["campaign"])
 
 
 def has_write(context, config):
@@ -116,7 +117,7 @@ def dashboard(request, campaign_id):
         from .models import CampaignEvent
         events = CampaignEvent.objects.filter(campaign=campaign, ends_at__gte=timezone.now()).exclude(status="cancelled").order_by("starts_at")[:4]
     if "audit.read.campaign" in permissions:
-        activity = AuditEvent.objects.filter(campaign=campaign).select_related("actor")[:6]
+        activity = visible_audit_events(request.user, campaign).select_related("actor")[:6]
     context.update(title="Central de comando", active="dashboard", metrics=metrics, tasks=tasks, activity=activity, events=events, pending=pending)
     return render(request, "workspace/dashboard.html", context)
 
@@ -174,6 +175,7 @@ def module_edit(request, campaign_id, key, object_id=None):
                 require_campaign_permission(request.user, locked_campaign, config.write)
                 if instance:
                     instance = config.model.objects.select_for_update().get(pk=object_id, campaign_id=campaign_id)
+                    require_object_access(request.user, instance)
                     check_version(instance, request.POST.get("row_version"))
                     if not can_edit(instance):
                         raise ValidationError("Este registro não pode mais ser editado.")
@@ -205,6 +207,8 @@ def module_edit(request, campaign_id, key, object_id=None):
                         import_aggregate_csv(obj, request.FILES.get("file"))
                     else:
                         obj.save()
+                    if config.model is LegalCase and not instance:
+                        initialize_case_access(obj, request.user)
                     audit(request.user, obj, f"{key}.{'updated' if instance else 'created'}", fields=list(config.fields))
                     IdempotencyRecord.objects.create(tenant=context["campaign"].tenant, campaign=context["campaign"], actor_scope=f"user:{request.user.pk}", route=route, key_hash=hashed, request_hash=canonical_json_hash({f: str(getattr(obj, f)) for f in config.fields}), status_code=201, result_ref={"object_id": str(obj.pk)}, expires_at=timezone.now() + timedelta(hours=24))
                     messages.success(request, "Registro salvo com sucesso.")
@@ -286,6 +290,9 @@ def module_detail(request, campaign_id, key, object_id):
     display_fields = list(dict.fromkeys([*config.fields, *config.columns, "created_at", "updated_at", "row_version"]))
     context.update(title=str(obj), config=config, active=key, obj=obj, display_fields=display_fields, actions=actions, can_edit=config.editable and has_write(context, config) and can_edit(obj), command_id=str(uuid.uuid4()))
     context["history"] = AuditEvent.objects.filter(campaign_id=campaign_id, resource_id=str(obj.pk))[:12] if context["audit_access"] else []
+    if isinstance(obj, LegalCase):
+        context["legal_access_manager"] = can_manage_access(request.user, obj)
+        audit(request.user, obj, "legal.case_viewed")
     if isinstance(obj, ElectorRegistration):
         from apps.core.crypto import decrypt_json
         context["private_person"] = {"name": decrypt_json(obj.person.display_name_ciphertext).get("value", ""), "contacts": [{"type": c.get_type_display(), "value": decrypt_json(c.value_ciphertext).get("value", ""), "verification": c.get_verification_state_display()} for c in obj.person.contact_points.all()]}
@@ -429,7 +436,7 @@ def document_rescan(request, campaign_id, object_id):
 def audit_log(request, campaign_id):
     context = campaign_context(request, campaign_id)
     require_campaign_permission(request.user, context["campaign"], "audit.read.campaign")
-    qs = AuditEvent.objects.filter(campaign_id=campaign_id).select_related("actor")
+    qs = visible_audit_events(request.user, context["campaign"]).select_related("actor")
     query = request.GET.get("q", "")[:100]
     if query:
         qs = qs.filter(action__icontains=query)

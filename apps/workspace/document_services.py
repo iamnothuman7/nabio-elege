@@ -21,6 +21,8 @@ def require_document_access(actor, document):
     require_campaign_permission(actor, document.campaign, "documents.download.resource")
     if document.classification != "internal":
         require_campaign_permission(actor, document.campaign, f"documents.read_{document.classification}.campaign")
+    from .legal_access import require_object_access
+    require_object_access(actor, document)
 
 
 def scan_stream(file):

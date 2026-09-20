@@ -1,18 +1,20 @@
 from django.urls import path
 
-from . import auth_views, form_views, political_views, views
+from . import auth_views, form_views, legal_views, political_views, views
 
 urlpatterns = [
     path("", views.home, name="home"),
     path("entrar/", auth_views.login_view, name="login"),
     path("sair/", auth_views.logout_view, name="logout"),
     path("seguranca/", auth_views.security_view, name="security"),
+    path("senha/", auth_views.password_change, name="password_change"),
     path("convite/", auth_views.accept_invitation, name="accept_invitation"),
     path("f/<str:public_code>/", form_views.public_form_view, name="public_form"),
     path("c/<uuid:campaign_id>/", political_views.political_dashboard, name="dashboard"),
     path("c/<uuid:campaign_id>/mapa/", political_views.campaign_map, name="campaign_map"),
     path("c/<uuid:campaign_id>/operacao/", views.dashboard, name="operations_dashboard"),
     path("c/<uuid:campaign_id>/equipe/", views.team, name="team"),
+    path("c/<uuid:campaign_id>/juridico/<uuid:object_id>/acessos/", legal_views.case_access, name="case_access"),
     path("c/<uuid:campaign_id>/auditoria/", views.audit_log, name="audit_log"),
     path("c/<uuid:campaign_id>/relatorios/", views.reports, name="reports"),
     path("c/<uuid:campaign_id>/fase/", views.campaign_phase, name="campaign_phase"),

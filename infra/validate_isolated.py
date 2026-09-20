@@ -90,7 +90,7 @@ def validate_existing(commit):
     if actual != commit:
         raise RuntimeError("Release hash mismatch")
     command = ["runuser", "-u", ACCOUNT, "--", str(ROOT / "venv/bin/python")]
-    run([*command, "-m", "pip", "install", "--disable-pip-version-check", "--no-cache-dir", "-r", str(release / "requirements-production.txt")], timeout=600)
+    run([*command, "-m", "pip", "install", "--disable-pip-version-check", "--no-cache-dir", "-r", str(release / "requirements-production.lock")], timeout=600)
     env = {**os.environ, **environment, "TEST_DATABASE_NAME": database}
     env.pop("APP_ENV", None)
     print(json.dumps({"step": "postgresql-tests", "commit": commit, "database": database, "destructive_drop": False}), flush=True)
@@ -163,7 +163,7 @@ def provision(commit):
     run(["runuser", "-u", ACCOUNT, "--", "python3.12", "-m", "venv", str(venv)], timeout=120)
     python = str(venv / "bin/python")
     command = ["runuser", "-u", ACCOUNT, "--", python]
-    run([*command, "-m", "pip", "install", "--disable-pip-version-check", "--no-cache-dir", "-r", str(release / "requirements-production.txt")], timeout=600)
+    run([*command, "-m", "pip", "install", "--disable-pip-version-check", "--no-cache-dir", "-r", str(release / "requirements-production.lock")], timeout=600)
     env = {**os.environ, **environment}
     env.pop("APP_ENV", None)
     print(json.dumps({"step": "postgresql-tests", "release": str(release), "database": "test_nabio_elege_qa", "destructive_drop": False}), flush=True)

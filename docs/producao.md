@@ -41,7 +41,7 @@ HTTPS, cookies seguros e MFA são obrigatórios no perfil de produção. As veri
 2. Executar testes SQLite/PostgreSQL, revisão por pull request e CI verde. Registrar SHA completo e aprovação. Um push não é uma aprovação de produção.
 3. Validar staging separado, com dados sintéticos, HTTPS, uploads/antivírus, filas, backup/restauração e rollback. Teste isolado de banco não equivale a staging completo.
 4. Revalidar porta, nomes e DNS. Criar somente recursos próprios. Instalar apenas dependências necessárias, sem upgrades globais.
-5. Criar release imutável pelo SHA aprovado. Concluir lock de dependências com hashes antes da instalação reproduzível exigida nas regras.
+5. Criar release imutável pelo SHA aprovado. Executar `python infra/check_dependency_lock.py` e instalar com `python -m pip install -r requirements-production.lock`. O lock força hashes, índice oficial e wheels; nenhuma instalação global.
 6. Criar backup específico antes de alterações/migrations. Registrar UTC, SHA, tamanho e checksum. Conferir com pg_restore e testar restauração em banco isolado; nunca sobrescrever um banco existente.
 7. Executar `check --deploy`, `makemigrations --check --dry-run`, testes e `collectstatic --noinput`. Conferir `migrate --plan` antes de aplicar.
 8. Executar `manage.py check_runtime --settings=nabio_elege.production_settings`. Verificar também workers/scheduler e suas filas.
@@ -76,6 +76,16 @@ Evidências de 2026-09-20 para `fae5f0b2569427251e154641fb30421dbfda60a3`:
 
 `infra/validate_isolated.py --commit <sha-completo>` provisiona QA uma única vez. `--existing` valida outra revisão em um banco novo por SHA, recusando alvos existentes e preservando evidências; não usar como ferramenta de produção. O script deliberadamente não apaga bancos de testes.
 
-A branch `codex/inventory-production-readiness` está publicada. O PR ainda precisa ser aberto e aprovado por revisor independente; push e CI não equivalem a aprovação. Staging completo, lock com hashes, scanners de dependências/segredos, validação de formato/assets, restauração completa, rollback, TLS, antivírus, monitoramento e infraestrutura exclusiva de produção continuam pendentes. As pendências funcionais constam em `implementation-status.md`.
+A branch `codex/inventory-production-readiness` está publicada. O PR ainda precisa ser aberto e aprovado por revisor independente; push e CI não equivalem a aprovação. O código agora inclui lock com hashes, scanners e validação de templates/assets. Staging completo, restauração completa, rollback, TLS, antivírus, monitoramento e infraestrutura exclusiva de produção continuam pendentes. As pendências funcionais constam em `implementation-status.md`.
+
+## Primeiro operador e atualização de segurança
+
+Depois de backup, revisão e migrations, executar `manage.py bootstrap_operator` no ambiente correto. O comando exige `--tenant-name`, `--tenant-slug`, `--campaign-name`, `--campaign-code`, `--election-id`, `--office-code`, `--jurisdiction-code`, `--username` e um ou mais `--permission CODIGO`. Escolher os códigos aprovados para aquela função; não copiar todos indiscriminadamente.
+
+A senha inicial é solicitada sem eco, com confirmação, validação e mínimo de 12 caracteres. A opção `--password-stdin` existe para integração com entrada protegida de um gerenciador de segredos; nunca colocar senha em shell history, argumento, arquivo versionado ou relatório. O comando recusa organização/usuário existente e não cria privilégios staff/superuser. O primeiro login leva a `/senha/`, depois ao MFA exigido pelo perfil de produção. Não criar contas reais antes de definir seus responsáveis e permissões.
+
+As migrations 0006/0007 são aditivas. A 0007 limita os casos existentes ao autor/responsável com vínculo ativo, sem conceder acesso geral ao jurídico. Conferir a atribuição antes de liberar o ambiente; casos órfãos permanecem negados. Não fazer rollback para código anterior ao controle por caso com dados sensíveis: essa versão antiga não aplica a nova proteção. Usar correção adiante ou uma release compatível que mantenha o controle.
+
+A CI produz um arquivo de código rastreado por Git e checksum somente após testes e scanners. Isso não publica a aplicação nem contém configuração privada, banco ou uploads. A auditoria de dependências procura vulnerabilidades conhecidas; não certifica ausência de falhas.
 
 Referência: [checklist oficial de deployment do Django](https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/).

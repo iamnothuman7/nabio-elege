@@ -4,14 +4,14 @@ Atualizado em 2026-09-20. “Parcial” significa que há interface ou fluxo exe
 
 | Módulo | Estado | Entrega disponível |
 | --- | --- | --- |
-| M01 Campanhas e organizações | Parcial | Tenant, fases, vínculos, convites, MFA, isolamento e permissões explícitas |
+| M01 Campanhas e organizações | Parcial | Tenant, fases, vínculos, convites, MFA, troca de senha com revogação de sessões e bootstrap de operador com permissões explícitas |
 | M02 Central de comando | Parcial | Painel eleitoral, candidatura, territórios e mapa operacional interativo |
 | M03 Projetos e tarefas | Parcial | CRUD, dependências, evidência e transições de execução |
 | M04 Financeiro e orçamento | Parcial | Versões de orçamento, linhas, aprovação independente, obrigações, pagamentos, estornos e conciliação |
 | M05 Arrecadação | Parcial | Cadastro de recebimentos financeiros e estimáveis; regras completas pendentes |
 | M06 Contabilidade | Parcial | Manifesto com hash, revisão, exportação JSON e protocolo de entrega externa |
 | M07 Compras e fornecedores | Parcial | Itens, solicitação, pedido aprovado, obrigação canônica e recebimento parcial em estoque |
-| M08 Jurídico | Parcial | Casos, responsáveis e revisão; acesso ainda por campanha/papel, não por caso |
+| M08 Jurídico | Parcial | Casos, responsáveis, revisão e concessões por caso; bloqueios propagados a documentos, seletores, ocorrências e auditoria |
 | M09 Calendário regulatório | Parcial | Prazos e acompanhamento manual; sem sincronização normativa |
 | M10 Estoque | Parcial | Entradas/saídas, reservas com expiração automática, transferências em trânsito, recebimento parcial e devolução com conferência independente |
 | M11 Patrimônio | Parcial | Bens e custódias com prevenção de conflito de período |
@@ -44,12 +44,22 @@ Os dados de demonstração não indicam candidatura, partido, número ou data el
 - Implementar e homologar RLS no PostgreSQL; ampliar testes concorrentes. Dois testes concorrentes de estoque passaram no PostgreSQL real (saída concorrente e recebimento idempotente), mas não representam uma auditoria completa de concorrência.
 - Completar confirmação de canais, governança de finalidades, treinamento e direitos de privacidade; implementar retenção, bloqueio legal e descarte também em backups.
 - Homologar orçamento comprometido, alçadas, documentos obrigatórios, arrecadação, regras contábeis e formatos oficiais com responsáveis qualificados. Não há certificação ou transmissão ao TSE.
-- Completar ACL por caso jurídico, cotações e versionamento de dados bancários. Transferências em trânsito e expiração de reservas já estão implementadas; a homologação de concorrência permanece necessária.
+- Homologar o novo controle de acesso por caso jurídico e completar cotações e versionamento de dados bancários. Transferências em trânsito e expiração de reservas já estão implementadas; a homologação ampla de concorrência permanece necessária.
 - Dimensionar mapas para o tráfego previsto e selecionar provedor de tiles apropriado; o mapa demonstrativo depende de serviços externos.
 - Concluir exportações assíncronas volumosas, armazenamento de auditoria externo e monitoramento operacional.
 - Executar testes de carga, restauração, segurança e acessibilidade e homologar os dois ciclos completos da especificação.
 
 ## Evidências e limites da validação
+
+### Continuação: contas, jurídico e cadeia de entrega
+
+- Troca de senha exige senha atual, validação da nova senha e segundo fator fresco quando já habilitado. Revoga outras sessões, limita tentativas e registra auditoria sem segredos. O operador inicial deve trocar a senha antes de acessar campanhas e, em produção, cadastrar MFA.
+- `bootstrap_operator` cria organização, campanha, papel e vínculo somente quando os alvos não existem, com permissões especificadas individualmente, sem staff/superusuário. Não imprime a senha nem aceita senha em argumento de comando.
+- Cada caso jurídico exige uma concessão além do papel da campanha. Administradores de acesso podem conceder/revogar, mas não remover o último administrador ativo. Documento associado a vários casos exige acesso a todos eles. A migration inicial preserva apenas autor/responsável ativos dos casos existentes; casos sem esses vínculos ficam inacessíveis até regularização administrativa revisada.
+- Instalação de produção usa `requirements-production.lock`, com 34 dependências fixadas (uma condicional para Windows), hashes de wheels do PyPI e proibição de builds de código-fonte. A CI recusa divergência entre entradas e lock.
+- CI ampliada com análise estática, formato dos novos módulos, auditoria de dependências, Gitleaks no histórico, compilação de templates, collectstatic e artefato de código por SHA após os testes. As únicas exceções do scanner são fingerprints históricos das chaves intencionais de teste/demo, nunca caminhos inteiros.
+
+Essas mudanças ainda precisam de revisão independente e staging completo. Controle por caso na aplicação não substitui RLS no PostgreSQL, que continua pendente.
 
 A continuação acrescentou 18 testes de distribuição/estoque, outro teste concorrente, seis testes de proteção de implantação e cinco verificações do provisionamento isolado. A falha anterior de PostgreSQL foi reproduzida e corrigida no encerramento do stream pelo cliente de testes. A versão `fae5f0b2569427251e154641fb30421dbfda60a3` passou nos 92 testes do QA PostgreSQL 14 e na [CI SQLite/PostgreSQL 14/PostgreSQL 15](https://github.com/iamnothuman7/nabio-elege/actions/runs/35541254447). Os dois testes concorrentes são ignorados somente na combinação SQLite.
 

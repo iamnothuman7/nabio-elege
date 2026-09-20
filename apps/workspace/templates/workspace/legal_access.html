@@ -1,0 +1,18 @@
+{% extends 'workspace/base.html' %}
+{% block content %}
+<a href="{% url 'module_detail' campaign.id 'juridico' case.id %}">← Voltar ao caso</a>
+<div class="page-heading"><div><div class="eyebrow">JURÍDICO · ACESSO RESTRITO</div><h1>Acessos do caso</h1><p>{{ case.title }}</p></div></div>
+<section class="panel padded">
+  <p>A permissão jurídica da campanha não libera todos os casos. Cada pessoa precisa de um vínculo ativo e de uma concessão específica. Documentos compartilhados exigem acesso a todos os casos associados.</p>
+  <div class="table-wrap"><table><thead><tr><th>Pessoa</th><th>Poder de delegação</th><th>Situação da concessão</th><th>Ação</th></tr></thead><tbody>
+  {% for grant in grants %}<tr><td>{{ grant.membership.user.username }}</td><td>{{ grant.can_manage_access|yesno:'Administra acessos,Não administra acessos' }}</td><td>{% if grant.revoked_at %}Revogada{% else %}Concedida · requer vínculo ativo{% endif %}</td><td>
+    {% if writable and not grant.revoked_at %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="revoke"><input type="hidden" name="membership" value="{{ grant.membership_id }}"><input type="hidden" name="row_version" value="{{ case.row_version }}"><label>Motivo da revogação<input name="reason" required minlength="3" maxlength="500"></label><button class="button secondary" type="submit">Revogar</button></form>{% endif %}
+  </td></tr>{% endfor %}</tbody></table></div>
+</section>
+{% if writable %}<section class="panel padded section-gap"><h2>Conceder ou atualizar acesso</h2>
+<form method="post">{% csrf_token %}<input type="hidden" name="action" value="grant"><input type="hidden" name="row_version" value="{{ case.row_version }}">
+<label>Integrante autorizado<select name="membership" required>{% for member in case_members %}<option value="{{ member.id }}">{{ member.user.username }}</option>{% endfor %}</select></label>
+<label><input type="checkbox" name="can_manage"> Pode administrar os acessos deste caso</label>
+<label>Motivo administrativo, sem dados do caso<textarea name="reason" required minlength="3" maxlength="500" rows="3"></textarea></label>
+<button class="button" type="submit">Salvar concessão</button></form></section>{% endif %}
+{% endblock %}

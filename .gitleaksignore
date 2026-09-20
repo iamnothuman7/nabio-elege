@@ -1,0 +1,4 @@
+# Exact historical occurrences of the intentional, public Fernet fixture key.
+# production_settings/checks reject this known demo key. No paths/rules excluded.
+c657272c58bf2692a00846a496b694e481d248fb:nabio_elege/local_settings.py:generic-api-key:16
+fa3aa8d765e7abb8609590f7f4b919b9fb6bbdb5:nabio_elege/test_settings.py:generic-api-key:14

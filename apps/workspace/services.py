@@ -463,6 +463,10 @@ def execute_action(*, actor, campaign, config, object_id, action, version, comma
     require_writable(campaign)
     permission = config.review if action in {"approve", "reject"} and config.review else config.write
     require_campaign_permission(actor, campaign, permission)
+    from .legal_access import require_object_access
+    obj = config.model.objects.select_for_update().get(pk=object_id, campaign=campaign)
+    # Recheck before returning cached/idempotent results as well as mutations.
+    require_object_access(actor, obj)
     try:
         uuid.UUID(command_id)
     except (ValueError, TypeError, AttributeError):
@@ -475,7 +479,6 @@ def execute_action(*, actor, campaign, config, object_id, action, version, comma
         if existing.request_hash != digest:
             raise ValidationError("Este comando já foi usado com outro conteúdo.")
         return False
-    obj = config.model.objects.select_for_update().get(pk=object_id, campaign=campaign)
     if isinstance(obj, ElectorRegistration) and obj.owner.user_id != actor.pk:
         require_campaign_permission(actor, campaign, "electors.read.campaign")
     check_version(obj, version)

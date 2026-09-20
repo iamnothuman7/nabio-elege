@@ -3,7 +3,7 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
@@ -13,6 +13,7 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.utils.crypto import salted_hmac
 from django.views.decorators.http import require_POST
+from django.views.decorators.debug import sensitive_post_parameters
 
 from apps.campaigns.models import Membership
 from apps.core.crypto import decrypt_json, encrypt_json, hash_token
@@ -21,6 +22,7 @@ from .models import Invitation, LoginGuard, SecurityProfile
 from .security import new_totp_secret, verify_second_factor
 
 
+@sensitive_post_parameters("password")
 def login_view(request):
     error = ""
     if request.method == "POST":
@@ -38,6 +40,8 @@ def login_view(request):
                 login(request, user)
                 profile, _ = SecurityProfile.objects.get_or_create(user=user)
                 request.session["security_version"] = profile.session_version
+                if profile.password_change_required:
+                    return redirect("password_change")
                 return redirect("security" if settings.MFA_REQUIRED or profile.enabled_at else "home")
             if not blocked:
                 for guard in guards:
@@ -57,6 +61,7 @@ def logout_view(request):
 
 
 @login_required
+@sensitive_post_parameters("code")
 def security_view(request):
     profile, _ = SecurityProfile.objects.get_or_create(user=request.user)
     if not profile.totp_secret_ciphertext:
@@ -88,6 +93,7 @@ def security_view(request):
     return render(request, "workspace/security.html", {"secret": secret, "codes": codes, "error": error, "enabled": bool(profile.enabled_at)})
 
 
+@sensitive_post_parameters("password", "token")
 def accept_invitation(request):
     error = ""
     if request.method == "POST":
@@ -115,3 +121,56 @@ def accept_invitation(request):
         except ValidationError as exc:
             error = " ".join(exc.messages)
     return render(request, "workspace/invitation.html", {"error": error})
+
+
+@login_required
+@sensitive_post_parameters("old_password", "new_password1", "new_password2", "second_factor")
+def password_change(request):
+    from .account_forms import SecurePasswordChangeForm
+
+    profile, _ = SecurityProfile.objects.get_or_create(user=request.user)
+    form = SecurePasswordChangeForm(request.user, mfa_enabled=bool(profile.enabled_at))
+    changed = False
+    if request.method == "POST":
+        # Serialize password changes against the current stored password, not a
+        # stale request.user. Failed attempts must commit their guard counters.
+        with transaction.atomic():
+            user = User.objects.select_for_update().get(pk=request.user.pk)
+            profile = SecurityProfile.objects.select_for_update().get(user=user)
+            key = salted_hmac("password-change", str(user.pk)).hexdigest()
+            guard, _ = LoginGuard.objects.select_for_update().get_or_create(key=key)
+            form = SecurePasswordChangeForm(user, request.POST, mfa_enabled=bool(profile.enabled_at))
+            if guard.locked_until and guard.locked_until > timezone.now():
+                form.add_error(None, "Muitas tentativas. Aguarde 15 minutos.")
+            elif form.is_valid():
+                if profile.enabled_at and not verify_second_factor(user, form.cleaned_data["second_factor"]):
+                    form.add_error("second_factor", "Código inválido, utilizado ou temporariamente bloqueado.")
+                else:
+                    form.save()
+                    # verify_second_factor updates the same profile; save only
+                    # the password/session fields so recovery counters survive.
+                    profile.password_change_required = False
+                    profile.password_changed_at = timezone.now()
+                    profile.session_version += 1
+                    profile.save(update_fields=["password_change_required", "password_changed_at", "session_version"])
+                    append_audit_event(actor=user, action="security.password_changed", resource_type="user", resource_id=user.pk)
+                    changed = True
+            if changed:
+                guard.failures = 0
+                guard.locked_until = None
+            elif not (guard.locked_until and guard.locked_until > timezone.now()):
+                guard.failures += 1
+                if guard.failures >= 5:
+                    guard.failures = 0
+                    guard.locked_until = timezone.now() + timedelta(minutes=15)
+            guard.save()
+        if changed:
+            update_session_auth_hash(request, user)
+            request.session["security_version"] = profile.session_version
+            if profile.enabled_at:
+                request.session["mfa_version"] = profile.session_version
+            else:
+                request.session.pop("mfa_version", None)
+            messages.success(request, "Senha alterada. As outras sessões foram encerradas.")
+            return redirect("security" if settings.MFA_REQUIRED and not profile.enabled_at else "home")
+    return render(request, "workspace/password_change.html", {"form": form, "required": profile.password_change_required})

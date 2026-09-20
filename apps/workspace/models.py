@@ -18,6 +18,9 @@ class SecurityProfile(models.Model):
     failures = models.PositiveSmallIntegerField(default=0)
     locked_until = models.DateTimeField(null=True, blank=True)
 
+    password_change_required = models.BooleanField(default=False)
+    password_changed_at = models.DateTimeField(null=True, blank=True)
+
 
 class LoginGuard(models.Model):
     key = models.CharField(max_length=64, primary_key=True)
@@ -64,6 +67,16 @@ class LegalCase(Reviewable):
     case_type = models.CharField("Natureza", max_length=80)
     source_ref = models.URLField("Fonte", blank=True)
     restricted_document = models.ForeignKey("core.Document", on_delete=models.PROTECT, null=True, blank=True)
+
+
+class LegalCaseAccess(CampaignScopedModel):
+    legal_case = models.ForeignKey(LegalCase, on_delete=models.PROTECT, related_name="access_grants")
+    membership = models.ForeignKey("campaigns.Membership", on_delete=models.PROTECT)
+    can_manage_access = models.BooleanField(default=False)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["legal_case", "membership"], name="uniq_legal_case_membership")]
 
 
 class RegulatoryDeadline(Reviewable):
