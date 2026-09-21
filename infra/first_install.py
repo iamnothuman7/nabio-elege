@@ -313,6 +313,7 @@ def antivirus(root, name):
         run(["dpkg-deb", "-x", deb, vendor])
     write_new(vendor / "package-sha256.json", json.dumps(hashes, indent=2))
     values = dict(os.environ, LD_LIBRARY_PATH=str(vendor / "usr/lib/x86_64-linux-gnu"))
+    values["CVD_CERTS_DIR"] = str(vendor / "etc/clamav/certs")
     for binary in ("sbin/clamd", "bin/freshclam"):
         output = run(["ldd", vendor / "usr" / binary], env=values)
         if "not found" in output:
@@ -444,7 +445,7 @@ def services(root, name, web):
         environment_file=False,
         extra="MemoryMax=256M",
     )
-    av_env = f"Environment=LD_LIBRARY_PATH={root}/vendor/usr/lib/x86_64-linux-gnu\nMemoryMax=2G\nCPUQuota=60%"
+    av_env = f"Environment=LD_LIBRARY_PATH={root}/vendor/usr/lib/x86_64-linux-gnu\nEnvironment=CVD_CERTS_DIR={root}/vendor/etc/clamav/certs\nMemoryMax=2G\nCPUQuota=60%"
     unit(
         root,
         name,
@@ -467,7 +468,7 @@ def services(root, name, web):
         root,
         name,
         "web",
-        f"{py}/gunicorn nabio_elege.wsgi:application --bind 127.0.0.1:{web} --workers 2 --threads 2 --timeout 30 --graceful-timeout 30 --error-logfile -",
+        f"{py}/gunicorn nabio_elege.wsgi:application --chdir {root}/current --bind 127.0.0.1:{web} --workers 2 --threads 2 --timeout 30 --graceful-timeout 30 --error-logfile -",
         writable,
         extra="ExecReload=/bin/kill -HUP $MAINPID\nMemoryMax=768M",
     )
@@ -504,7 +505,7 @@ def services(root, name, web):
     print("EXCLUSIVE_SERVICES_STARTED", flush=True)
 
 
-def check(root, name):
+def check(root, name, verify_baseline=True):
     print(manage(root, "check_runtime"), flush=True)
     output = run(
         [
@@ -523,7 +524,8 @@ def check(root, name):
         raise RuntimeError("Worker not responding")
     for kind in ("web", "worker", "beat", "redis", "av", "freshclam"):
         run(["systemctl", "is-active", f"{name}-{kind}"])
-    assert_baseline(root)
+    if verify_baseline:
+        assert_baseline(root)
     print("RUNTIME_AND_WORKER_OK", flush=True)
 
 
