@@ -10,6 +10,31 @@ from django.test import SimpleTestCase
 
 
 class BrandIdentityTests(SimpleTestCase):
+    def test_official_favicon_is_packaged_without_modification(self):
+        asset = finders.find("workspace/brand/nabio-elege-icon.png")
+        self.assertIsNotNone(asset)
+        content = Path(asset).read_bytes()
+        self.assertEqual(content[:8], b"\x89PNG\r\n\x1a\n")
+        self.assertEqual(int.from_bytes(content[16:20], "big"), 3375)
+        self.assertEqual(int.from_bytes(content[20:24], "big"), 3375)
+        self.assertEqual(
+            hashlib.sha256(content).hexdigest(),
+            "1268ccee4c18972aa6ad70dd57ef81aff9066436683e377ba44a959aff1faabc",
+        )
+
+    def test_all_page_shells_declare_the_official_favicon_in_head(self):
+        fragment = render_to_string("workspace/brand_icons.html").strip()
+        self.assertIn('rel="icon"', fragment)
+        self.assertIn('type="image/png"', fragment)
+        self.assertIn('sizes="3375x3375"', fragment)
+        self.assertIn("workspace/brand/nabio-elege-icon.png", fragment)
+        for name in ("landing", "auth_base", "base", "public_form"):
+            with self.subTest(template=name):
+                html = render_to_string(f"workspace/{name}.html", {"unavailable": True})
+                head = html.split("<head>", 1)[1].split("</head>", 1)[0]
+                self.assertIn(fragment, head)
+                self.assertEqual(html.count('rel="icon"'), 1)
+
     def test_official_artwork_is_packaged_without_modification(self):
         asset = finders.find("workspace/brand/nabio-elege.png")
         self.assertIsNotNone(asset)
