@@ -90,6 +90,8 @@ def home(request):
     if not request.user.is_authenticated:
         from .marketing_views import landing
         return landing(request)
+    if request.user.is_active and request.user.is_staff and request.user.is_superuser:
+        return redirect("platform_dashboard")
     campaigns = campaigns_for_user(request.user).select_related("tenant").order_by("name")
     if campaigns.count() == 1:
         return redirect("dashboard", campaign_id=campaigns.first().pk)

@@ -81,8 +81,11 @@ def backup(root):
             raise RuntimeError("Unexpected media symlink")
         if path.is_file():
             paths["media/" + str(path.relative_to(root / "shared/media"))] = path
-    for unit in Path("/etc/systemd/system").glob(root.name + "-*.service"):
-        paths["units/" + unit.name] = unit
+    for purpose in ("web", "worker", "beat", "redis", "av", "freshclam", "backup", "monitor"):
+        for extension in ("service", "timer"):
+            unit = Path("/etc/systemd/system") / f"{root.name}-{purpose}.{extension}"
+            if unit.is_file():
+                paths["units/" + unit.name] = unit
     hashes = {name: digest(path) for name, path in paths.items()}
     with tarfile.open(archive, "x:gz") as tar:
         for name, path in paths.items():

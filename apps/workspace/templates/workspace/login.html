@@ -1,10 +1,11 @@
 {% extends 'workspace/auth_base.html' %}
 {% block title %}Entrar na plataforma{% endblock %}
+{% block body_class %}login-page{% endblock %}
 {% block content %}
 <div class="auth-card">
   <div class="eyebrow">SEU PRÓXIMO PASSO COMEÇA AQUI</div>
   <h2>Bom ter você de volta.</h2>
-  <p class="muted">Acesse sua central de campanha e acompanhe<br>o que acontece em cada território.</p>
+  <p class="muted">Acesse sua central de campanha e acompanhe o que acontece em cada território.</p>
   {% if local_demo %}<div class="notice">Demonstração local · dados fictícios.<br>Use a conta fornecida na entrega. Não insira dados reais.</div>{% endif %}
   {% if error %}<div class="notice error" id="login-error" role="alert">{{ error }}</div>{% endif %}
   <form method="post" action="{% url 'login' %}">

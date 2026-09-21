@@ -1,8 +1,14 @@
 from django.urls import path
 
-from . import auth_views, form_views, geo_views, legal_views, marketing_views, political_views, views
+from . import auth_views, form_views, geo_views, legal_views, marketing_views, political_views, platform_views, views
 
 urlpatterns = [
+    path("plataforma/", platform_views.dashboard, name="platform_dashboard"),
+    path("admin/", platform_views.dashboard, name="platform_admin_alias"),
+    path("plataforma/clientes/novo/", platform_views.customer_create, name="platform_customer_create"),
+    path("plataforma/campanhas/<uuid:object_id>/abrir/", platform_views.campaign_open, name="platform_campaign_open"),
+    path("plataforma/clientes/<uuid:object_id>/status/", platform_views.tenant_status, name="platform_tenant_status"),
+    path("plataforma/usuarios/<int:object_id>/status/", platform_views.user_status, name="platform_user_status"),
     path("", views.home, name="home"),
     path("produto/", marketing_views.landing, name="product_landing"),
     path("ajuda-acesso/", marketing_views.access_help, name="access_help"),

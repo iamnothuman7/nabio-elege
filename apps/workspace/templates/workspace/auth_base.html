@@ -8,13 +8,13 @@
   <link rel="stylesheet" href="{% static 'workspace/app.css' %}">
   <link rel="stylesheet" href="{% static 'workspace/auth.css' %}">
   <script src="{% static 'workspace/auth.js' %}" defer></script>
-<link rel="stylesheet" href="{% static 'workspace/brand.css' %}">{% include 'workspace/brand_icons.html' %}</head>
-<body class="auth-body">
+<link rel="stylesheet" href="{% static 'workspace/brand.css' %}"><link rel="stylesheet" href="{% static 'workspace/interface.css' %}">{% include 'workspace/brand_icons.html' %}</head>
+<body class="auth-body {% block body_class %}{% endblock %}">
   <a href="#access-content" class="skip-link">Ir para o acesso</a>
   <main class="auth-layout">
     <section class="auth-story" aria-label="Nabio Elege, gestão de campanhas">
       <a class="brand" href="{% url 'product_landing' %}" aria-label="Nabio Elege, apresentação do produto">{% include 'workspace/brand_logo.html' with white=True %}</a>
-      <div>
+      <div class="auth-story-center">
         <div class="eyebrow">GESTÃO POLÍTICA. PRESENÇA NO TERRITÓRIO.</div>
         <h1>Sua campanha,<br>conectada de<br><em>ponta a ponta.</em></h1>
         <p>Do planejamento no comitê à operação nas comunidades. Pessoas, territórios e recursos no mesmo lugar.</p>

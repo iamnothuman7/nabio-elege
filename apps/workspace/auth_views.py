@@ -24,7 +24,7 @@ from .security import new_totp_secret, verify_second_factor
 
 
 @sensitive_post_parameters("password")
-@require_http_methods(["GET", "POST"])
+@require_http_methods(["GET", "HEAD", "POST"])
 def login_view(request):
     error = ""
     username = ""

@@ -102,7 +102,9 @@ class WorkspaceTests(TestCase):
         self.assertFalse(has_campaign_permission(admin, self.campaign, "finance.read.campaign"))
         self.client.force_login(admin)
         self.assertEqual(self.client.get(reverse("dashboard", args=[self.campaign.pk])).status_code, 404)
-        self.assertEqual(self.client.get("/admin/").status_code, 404)
+        # Platform inventory is available, but it does not grant campaign access.
+        self.assertContains(self.client.get("/admin/"), "Administração da plataforma")
+        self.assertFalse(campaigns_for_user(admin).exists())
 
     def test_suspended_tenant_and_revoked_membership_deny_access(self):
         self.tenant.status = "suspended"
