@@ -17,6 +17,7 @@ from django.views.decorators.debug import sensitive_post_parameters
 
 from apps.campaigns.models import Membership
 from apps.core.crypto import decrypt_json, encrypt_json, hash_token
+from apps.core.client_address import client_address
 from apps.core.services import append_audit_event
 from .models import Invitation, LoginGuard, SecurityProfile
 from .security import new_totp_secret, verify_second_factor
@@ -30,7 +31,7 @@ def login_view(request):
     if request.method == "POST":
         username = request.POST.get("username", "")[:150]
         password = request.POST.get("password", "")
-        keys = [salted_hmac("login", "account:" + username.casefold()).hexdigest(), salted_hmac("login", "ip:" + request.META.get("REMOTE_ADDR", "")).hexdigest()]
+        keys = [salted_hmac("login", "account:" + username.casefold()).hexdigest(), salted_hmac("login", "ip:" + client_address(request)).hexdigest()]
         with transaction.atomic():
             guards = [LoginGuard.objects.select_for_update().get_or_create(key=key)[0] for key in sorted(keys)]
             blocked = any(g.locked_until and g.locked_until > timezone.now() for g in guards)

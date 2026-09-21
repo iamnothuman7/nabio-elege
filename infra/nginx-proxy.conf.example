@@ -1,0 +1,29 @@
+# Fragmento para o server HTTPS exclusivo do Nabio Elege.
+# Não instalar como configuração global nem substituir sites existentes.
+# Substituir <APP_PORT> somente após conferir a porta no inventário atual.
+# A aplicação deve escutar exclusivamente em 127.0.0.1.
+# Definir TRUSTED_PROXY_IPS=127.0.0.1,::1 e TRUST_PROXY_HEADERS=True
+# somente após revisar os módulos real_ip/headers herdados pelo Nginx.
+
+client_max_body_size 22m;
+
+location /media/ {
+    return 404;
+}
+
+location ~ (^|/)\. {
+    return 404;
+}
+
+location / {
+    proxy_pass http://127.0.0.1:<APP_PORT>;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host "";
+    proxy_set_header Forwarded "";
+    proxy_connect_timeout 3s;
+    proxy_read_timeout 30s;
+    proxy_send_timeout 30s;
+}

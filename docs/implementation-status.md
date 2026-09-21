@@ -52,6 +52,16 @@ Os dados de demonstração não indicam candidatura, partido, número ou data el
 
 ## Evidências e limites da validação
 
+### Publicação no Git e preparação de produção — 2026-09-21
+
+- O envio ao GitHub foi concluído selecionando explicitamente a conta já autorizada para este repositório. A branch `codex/inventory-production-readiness` foi publicada e o [PR #1](https://github.com/iamnothuman7/nabio-elege/pull/1) está aberto para revisão independente. Não houve merge nem autoaprovação.
+- A [CI do commit 8386270](https://github.com/iamnothuman7/nabio-elege/actions/runs/35598541670) passou em SQLite/Python 3.11, PostgreSQL 14/15/Python 3.12, scanners e artefato de release. Cada nova revisão do PR precisa passar novamente pelos mesmos checks.
+- Acrescentada identificação de origem por proxy explícito: `X-Real-IP` só é aceito de IPs exatos configurados, sem confiar em cadeias `X-Forwarded-For`. Limitadores de login e formulário continuam ativos. Cabeçalhos de segurança e `no-store` também cobrem bloqueios e redirecionamentos.
+- Os 12 testes novos de proxy passaram; a suíte local chegou a **178 testes com 23 skips de PostgreSQL**, sem erros. Novamente verificados 28 templates, análise estática e ausência de migrations pendentes. O fragmento Nginx é um exemplo revisável, não uma configuração instalada.
+- Nova auditoria SSH somente leitura confirmou ausência dos ambientes web de produção/staging do Nabio Elege, falha na validação TLS do domínio e antivírus próprio ainda não confirmado. Os serviços dos outros projetos continuaram ativos, sem reinício ou alteração. Inventário privado permanece fora do Git.
+
+**Bloqueios de liberação:** indicar revisor e obter aprovação independente do PR; completar staging com TLS, filas, antivírus, papéis separados, restauração e rollback; homologar os requisitos funcionais/privacidade pendentes abaixo. Acesso SSH e CI verde não equivalem a produto completo nem autorizam ignorar essas etapas.
+
 ### Continuação: login, apresentação, mapa nacional e isolamento
 
 - Landing page pública em `/produto/` e na página inicial anônima, com composição 3D em CSS, respeito à redução de movimento, abas por teclado, perguntas frequentes e avisos explícitos de produto em desenvolvimento. Não inclui preços, clientes ou certificações fictícias.
@@ -62,7 +72,7 @@ Os dados de demonstração não indicam candidatura, partido, número ou data el
 - Consulta real ao IBGE conferiu 27 UFs, 184 municípios/limites no Ceará e limite/distritos de Fortaleza. Login e landing page conferidos visualmente em desktop e celular; alternância de senha, erro, limpeza da senha e abas por teclado verificados. A inspeção visual autenticada do novo mapa continua pendente: a sessão local anterior expirou e não foi substituída sem o usuário.
 - Backup local antes de aplicar `core.0002` e `workspace.0008` à demonstração SQLite. Nenhum recurso de produção foi alterado. O provisionador legado de QA está bloqueado antes de efeitos; não elevar privilégios de uma conta no servidor compartilhado para executar testes de RLS.
 
-A recuperação automática por e-mail, CI desta revisão, revisão independente, staging completo e critérios de produção continuam pendentes. A validação local não autoriza publicação de dados reais. O GitHub estava sem credencial neste computador na última tentativa de envio.
+A recuperação automática por e-mail, revisão independente, staging completo e critérios de produção continuam pendentes. A validação local não autoriza publicação de dados reais. O bloqueio de envio ao GitHub foi resolvido na etapa registrada acima.
 
 ### Continuação: contas, jurídico e cadeia de entrega
 
@@ -75,7 +85,7 @@ A recuperação automática por e-mail, CI desta revisão, revisão independente
 
 Validação histórica anterior ao RLS: **123 testes, nenhum erro, dois testes concorrentes ignorados no SQLite**; 26 templates compilados; migrations aplicadas apenas à demonstração, após backup. A auditoria das dependências fixadas não encontrou vulnerabilidades conhecidas, e o scanner de segredos passou com as exceções históricas documentadas. Esses resultados são verificações pontuais, não uma certificação de segurança.
 
-O commit principal da entrega anterior é `b4a6270c1ecfc5959a16846abc376650017b757c`. Naquela etapa, o envio ao GitHub estava bloqueado pela ausência de credencial. Os testes PostgreSQL locais foram executados na continuação acima; a nova CI ainda depende de autenticação/envio. Não houve alteração do banco, dos serviços ou da configuração de produção nessas etapas.
+O commit principal da entrega anterior é `b4a6270c1ecfc5959a16846abc376650017b757c`. Naquela etapa, o envio ao GitHub estava bloqueado pela seleção de credencial. Os testes PostgreSQL locais e a nova CI foram executados nas continuações acima. Não houve alteração do banco, dos serviços ou da configuração de produção nessas etapas.
 
 Essas mudanças ainda precisam de revisão independente e staging completo. Controle por caso na aplicação complementa o RLS PostgreSQL; nenhum deles constitui homologação integral do produto.
 
@@ -89,7 +99,7 @@ Há testes automatizados para páginas dos módulos, isolamento, permissões, ap
 
 ## Próximas etapas, na ordem de liberação
 
-1. Autenticar o GitHub, enviar a branch e validar a CI desta versão em SQLite/PostgreSQL 14/PostgreSQL 15; abrir PR para revisor independente identificado pelo responsável do projeto.
+1. Indicar revisor independente para o PR #1 e obter sua aprovação sobre a revisão final, mantendo CI verde em SQLite/PostgreSQL 14/PostgreSQL 15.
 2. Homologar o RLS implementado e completar as demais lacunas de segurança, privacidade e regras de negócio relacionadas acima; registrar os critérios de aceite e as evidências por módulo.
 3. Provisionar e homologar staging isolado, inclusive antivírus real, filas, arquivos privados, recuperação integral e rollback. A evidência anterior de banco sintético não cobre esse aceite.
 4. Obter a aprovação exigida, confirmar domínio e recursos exclusivos e só então realizar a implantação de produção. Nenhum serviço de outro projeto pode ser alterado por essa entrega.

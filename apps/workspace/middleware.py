@@ -7,6 +7,7 @@ from django.utils.crypto import salted_hmac
 import time
 
 from .models import SecurityProfile
+from apps.core.client_address import client_address
 
 
 class AccessSecurityMiddleware:
@@ -14,8 +15,12 @@ class AccessSecurityMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        response = self.dispatch(request)
+        return self.secure_response(request, response)
+
+    def dispatch(self, request):
         if request.method == "POST" and (request.path.startswith("/f/") or request.path.startswith("/api/v1/public/")):
-            key = "public-rate:" + salted_hmac("public-rate", request.META.get("REMOTE_ADDR", "")).hexdigest() + ":" + str(int(time.time()) // 60)
+            key = "public-rate:" + salted_hmac("public-rate", client_address(request)).hexdigest() + ":" + str(int(time.time()) // 60)
             cache.add(key, 0, timeout=90)
             try:
                 attempts = cache.incr(key)
@@ -45,7 +50,10 @@ class AccessSecurityMiddleware:
                     if request.path.startswith("/api/"):
                         return JsonResponse({"code": "mfa_required", "detail": "Conclua a autenticação em dois fatores."}, status=403)
                     return redirect("security")
-        response = self.get_response(request)
+        return self.get_response(request)
+
+    @staticmethod
+    def secure_response(request, response):
         response["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none'"
         if getattr(request, "maps_enabled", False):
             response["Content-Security-Policy"] = "default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' https://unpkg.com; style-src-attr 'unsafe-inline'; img-src 'self' data: https://tile.openstreetmap.org; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none'"

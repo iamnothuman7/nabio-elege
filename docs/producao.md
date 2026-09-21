@@ -31,6 +31,7 @@ Usar `DJANGO_SETTINGS_MODULE=nabio_elege.production_settings`. Esse perfil não 
 - `MEDIA_ROOT` e `STATIC_ROOT`: diretórios persistentes fora da release, separados e não aninhados. Os documentos ficam em `MEDIA_ROOT/private`.
 - `CLAMAV_HOST`, `CLAMAV_PORT`: antivírus privado, sem exposição pública.
 - `TRUST_PROXY_HEADERS`: habilitar somente quando o proxy sobrescrever o cabeçalho de protocolo e a porta interna não estiver publicamente acessível.
+- `TRUSTED_PROXY_IPS`: lista de IPs exatos do proxy imediato, por exemplo `127.0.0.1,::1` quando Nginx e Gunicorn compartilham o servidor. Sem essa lista, `X-Real-IP` é ignorado. Não copiar endereços de visitantes nem aceitar coringas/redes.
 - `SECURE_HSTS_SECONDS`: manter zero até confirmar HTTPS. Não habilitar includeSubDomains/preload automaticamente.
 
 HTTPS, cookies seguros e MFA são obrigatórios no perfil de produção. As verificações de deployment recusam SQLite, cache local, segredos conhecidos de demonstração, hosts coringa e mistura entre arquivos públicos/privados. Essas verificações não substituem auditoria de segurança.
@@ -52,6 +53,14 @@ HTTPS, cookies seguros e MFA são obrigatórios no perfil de produção. As veri
 13. Verificar login/logout, isolamento, fluxos principais, desktop/celular, console, uploads e saúde interna/externa. Repetir baseline dos outros projetos e registrar o resultado.
 
 ## Saúde e manutenção
+
+### Endereço do visitante e limites de acesso
+
+O proxy deve **sobrescrever** `X-Real-IP` com o endereço que verificou, não repassar o valor recebido do visitante. A aplicação só usa esse cabeçalho quando a conexão vem de um IP explicitamente confiável, com endereço válido e único. `X-Forwarded-For` não é usado para escolher a chave dos limitadores. Endereços IPv6 são normalizados; valores ausentes/inválidos compartilham o limite do peer, sem criar chaves arbitrárias.
+
+Login continua limitado por conta e por origem. Os formulários públicos também usam a origem verificada, evitando que todos os visitantes sejam tratados como o mesmo Nginx. Respostas de bloqueio e redirecionamentos de segurança recebem `no-store`, CSP e política de permissões.
+
+O fragmento `infra/nginx-proxy.conf.example` é apenas um modelo, não uma configuração instalada. Revisar TLS, diretório de estáticos, logging sem dados sensíveis e configurações `real_ip` herdadas antes de usá-lo. Em topologia com CDN/balanceador, definir primeiro a cadeia de confiança: não habilitar confiança genérica nos cabeçalhos. O tratamento do IP não substitui o isolamento da porta interna nem a configuração segura do protocolo HTTPS.
 
 `/healthz/` é liveness mínimo, sem consulta ao banco ou exposição de infraestrutura. O comando `check_runtime` verifica banco, migrations, cache, broker e ClamAV, apresentando somente nomes dos componentes e resultado. Ele não certifica worker ativo, segurança ou backup.
 
@@ -76,7 +85,7 @@ Evidências de 2026-09-20 para `fae5f0b2569427251e154641fb30421dbfda60a3`:
 
 O provisionador legado `infra/validate_isolated.py` está bloqueado antes de qualquer efeito desde a implementação de RLS. Sua conta de QA não deve receber poderes de criação de papéis para executar a nova suíte em servidor compartilhado. Usar cluster de testes exclusivo e preparar staging com papéis separados conforme `rls.md`; preservar as evidências anteriores.
 
-A branch `codex/inventory-production-readiness` está publicada. O PR ainda precisa ser aberto e aprovado por revisor independente; push e CI não equivalem a aprovação. O código agora inclui lock com hashes, scanners e validação de templates/assets. Staging completo, restauração completa, rollback, TLS, antivírus, monitoramento e infraestrutura exclusiva de produção continuam pendentes. As pendências funcionais constam em `implementation-status.md`.
+A branch `codex/inventory-production-readiness` está publicada e o [PR #1](https://github.com/iamnothuman7/nabio-elege/pull/1) está aberto. Falta aprovação por revisor independente; push e CI não equivalem a aprovação. A CI de `8386270` passou, e cada revisão posterior exige novos checks. O código inclui lock com hashes, scanners e validação de templates/assets. Staging completo, restauração completa, rollback, TLS, antivírus, monitoramento e infraestrutura exclusiva de produção continuam pendentes. As pendências funcionais constam em `implementation-status.md`.
 
 ## Primeiro operador e atualização de segurança
 

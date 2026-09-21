@@ -4,6 +4,7 @@ from urllib.parse import urlsplit
 from cryptography.fernet import Fernet
 from django.conf import settings
 from django.core.checks import Error, Tags, register
+from .client_address import canonical_ip
 
 
 @register(Tags.security, deploy=True)
@@ -19,6 +20,9 @@ def production_guardrails(app_configs, **kwargs):
     require(not settings.DEBUG and not getattr(settings, "LOCAL_DEMO", False), "E001", "Demonstração e DEBUG são proibidos neste ambiente.")
     require(settings.DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql", "E002", "Use PostgreSQL dedicado em staging/produção.")
     require("apps.core.scope_middleware.CampaignScopeMiddleware" in settings.MIDDLEWARE, "E013", "O contexto transacional de isolamento deve estar ativo.")
+    proxies = getattr(settings, "TRUSTED_PROXY_IPS", [])
+    valid_proxies = isinstance(proxies, (list, tuple)) and all(canonical_ip(value) is not None for value in proxies)
+    require(valid_proxies and (not getattr(settings, "TRUST_PROXY_HEADERS", False) or bool(proxies)), "E014", "Configure IPs exatos dos proxies confiáveis; não use coringas, redes ou cabeçalhos sem um proxy conhecido.")
     require(settings.MFA_REQUIRED, "E003", "MFA deve ser obrigatório neste ambiente.")
     require(settings.SESSION_COOKIE_SECURE and settings.CSRF_COOKIE_SECURE and settings.SECURE_SSL_REDIRECT, "E004", "Exija HTTPS e cookies seguros.")
     hosts = settings.ALLOWED_HOSTS
