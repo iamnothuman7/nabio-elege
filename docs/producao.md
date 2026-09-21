@@ -1,5 +1,7 @@
 # Implantação isolada — Nabio Elege
 
+**Situação atual (21/09/2026):** staging homologado e versão instalada em produção, ainda com abertura pública bloqueada. A revisão do responsável já foi registrada na conversa. Consulte [o registro de implantação](deploy-2026-09-21.md) para evidências, aprovação, bloqueio de exportação do backup e próximos passos; os registros históricos abaixo não substituem esse estado atual.
+
 Roteiro público adaptado ao Nabio Elege. O inventário com IP, portas/PIDs de outros projetos, serviços e resultados do servidor fica exclusivamente no registro operacional privado, fora do Git. Consulte também `regras_servidor.md` e `implementation-status.md`.
 
 ## Isolamento obrigatório
