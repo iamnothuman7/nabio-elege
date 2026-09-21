@@ -25,7 +25,7 @@ Usar `DJANGO_SETTINGS_MODULE=nabio_elege.production_settings`. Esse perfil não 
 
 - `APP_ENV`: staging ou production.
 - `SECRET_KEY`, `FIELD_ENCRYPTION_KEY` (Fernet), `BLIND_INDEX_KEY`, `RECEIPT_TOKEN_KEY`: quatro valores fortes, independentes e exclusivos.
-- `DATABASE_URL`: PostgreSQL exclusivo, papel sem superusuário.
+- `DATABASE_URL`: PostgreSQL exclusivo, papel de execução sem superusuário, bypass, propriedade das tabelas ou criação de papéis. Usar papel de migrations separado; ver `rls.md`.
 - `REDIS_URL`, `CACHE_URL`: Redis exclusivo, autenticado e com timeouts.
 - `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`: hosts exatos e HTTPS. Estes nomes não usam prefixo DJANGO.
 - `MEDIA_ROOT` e `STATIC_ROOT`: diretórios persistentes fora da release, separados e não aninhados. Os documentos ficam em `MEDIA_ROOT/private`.
@@ -74,11 +74,13 @@ Evidências de 2026-09-20 para `fae5f0b2569427251e154641fb30421dbfda60a3`:
 - O ensaio de backup/restauração em QA passou. Trata-se de schema/dados sintéticos, não de recuperação integral de produção, arquivos privados, segredos ou cópia externa. Caminhos, tamanhos, checksums e inventário não são publicados neste relatório.
 - A demonstração local recebeu a migration 0005 após backup próprio. Nenhum banco preexistente foi apagado ou sobrescrito. Os auxiliares temporários de autenticação foram removidos após o uso.
 
-`infra/validate_isolated.py --commit <sha-completo>` provisiona QA uma única vez. `--existing` valida outra revisão em um banco novo por SHA, recusando alvos existentes e preservando evidências; não usar como ferramenta de produção. O script deliberadamente não apaga bancos de testes.
+O provisionador legado `infra/validate_isolated.py` está bloqueado antes de qualquer efeito desde a implementação de RLS. Sua conta de QA não deve receber poderes de criação de papéis para executar a nova suíte em servidor compartilhado. Usar cluster de testes exclusivo e preparar staging com papéis separados conforme `rls.md`; preservar as evidências anteriores.
 
 A branch `codex/inventory-production-readiness` está publicada. O PR ainda precisa ser aberto e aprovado por revisor independente; push e CI não equivalem a aprovação. O código agora inclui lock com hashes, scanners e validação de templates/assets. Staging completo, restauração completa, rollback, TLS, antivírus, monitoramento e infraestrutura exclusiva de produção continuam pendentes. As pendências funcionais constam em `implementation-status.md`.
 
 ## Primeiro operador e atualização de segurança
+
+A continuação de 2026-09-21 passou em 166 testes PostgreSQL 17.10 locais e em SQLite (23 verificações exclusivas de PostgreSQL ignoradas). Isso não é aprovação de implantação. `core.0002` força RLS e é irreversível: código antigo sem contexto de campanha é incompatível. Antes de qualquer rollout, homologar uma release de compatibilidade, migração de mensagens de fila e rollback que preserve as políticas. `workspace.0008` adiciona os campos de áreas geográficas. Não aplicar as migrations em produção apenas porque o teste local passou.
 
 Depois de backup, revisão e migrations, executar `manage.py bootstrap_operator` no ambiente correto. O comando exige `--tenant-name`, `--tenant-slug`, `--campaign-name`, `--campaign-code`, `--election-id`, `--office-code`, `--jurisdiction-code`, `--username` e um ou mais `--permission CODIGO`. Escolher os códigos aprovados para aquela função; não copiar todos indiscriminadamente.
 

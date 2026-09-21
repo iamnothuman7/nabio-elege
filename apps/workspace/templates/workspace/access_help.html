@@ -1,0 +1,21 @@
+{% extends 'workspace/auth_base.html' %}
+{% block title %}Ajuda para acessar{% endblock %}
+{% block content %}
+<div class="auth-card">
+  <div class="eyebrow">VAMOS RECUPERAR SEU CAMINHO</div>
+  <h2>Precisa de ajuda<br>para entrar?</h2>
+  <p class="muted">Escolha a orientação para sua situação. Nunca compartilhe sua senha, chave de autenticação ou códigos de recuperação.</p>
+  <div class="auth-help">
+    <h3>Esqueci minha senha</h3>
+    <p>A recuperação automática por e-mail ainda não está disponível nesta versão. Procure o responsável pela sua organização por um canal já conhecido. A equipe de suporte técnico deverá validar sua identidade antes de restabelecer o acesso.</p>
+    <h3>Perdi o acesso ao autenticador</h3>
+    <p>Após informar usuário e senha, use um dos códigos de recuperação guardados na ativação das duas etapas. Cada código só funciona uma vez. Sem esses códigos, procure o responsável pela organização.</p>
+    <h3>Recebi um convite</h3>
+    <p>Use o código recebido para ativar o acesso. Se o convite expirou, peça outro ao responsável pela campanha. Se você já tem uma conta, entre nela antes de aceitar.</p>
+    <h3>Meu acesso foi bloqueado</h3>
+    <p>Após várias tentativas incorretas, aguarde 15 minutos antes de tentar novamente. Confira o nome de usuário e se o Caps Lock está ativado.</p>
+  </div>
+  <a class="button wide" href="{% url 'login' %}">Voltar para entrar <span aria-hidden="true">→</span></a>
+  <p class="auth-bottom">Tem um código válido? <a href="{% url 'accept_invitation' %}">Ativar convite</a></p>
+</div>
+{% endblock %}

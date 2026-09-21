@@ -1,9 +1,11 @@
 from django.urls import path
 
-from . import auth_views, form_views, legal_views, political_views, views
+from . import auth_views, form_views, geo_views, legal_views, marketing_views, political_views, views
 
 urlpatterns = [
     path("", views.home, name="home"),
+    path("produto/", marketing_views.landing, name="product_landing"),
+    path("ajuda-acesso/", marketing_views.access_help, name="access_help"),
     path("entrar/", auth_views.login_view, name="login"),
     path("sair/", auth_views.logout_view, name="logout"),
     path("seguranca/", auth_views.security_view, name="security"),
@@ -12,6 +14,8 @@ urlpatterns = [
     path("f/<str:public_code>/", form_views.public_form_view, name="public_form"),
     path("c/<uuid:campaign_id>/", political_views.political_dashboard, name="dashboard"),
     path("c/<uuid:campaign_id>/mapa/", political_views.campaign_map, name="campaign_map"),
+    path("c/<uuid:campaign_id>/geografia/<slug:kind>/<str:code>/", geo_views.geography_layer, name="geography_layer"),
+    path("c/<uuid:campaign_id>/mapa/areas/", geo_views.create_map_area, name="create_map_area"),
     path("c/<uuid:campaign_id>/operacao/", views.dashboard, name="operations_dashboard"),
     path("c/<uuid:campaign_id>/equipe/", views.team, name="team"),
     path("c/<uuid:campaign_id>/juridico/<uuid:object_id>/acessos/", legal_views.case_access, name="case_access"),

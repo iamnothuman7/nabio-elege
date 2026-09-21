@@ -12,7 +12,7 @@ from django.db import transaction
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.utils.crypto import salted_hmac
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 from django.views.decorators.debug import sensitive_post_parameters
 
 from apps.campaigns.models import Membership
@@ -23,15 +23,18 @@ from .security import new_totp_secret, verify_second_factor
 
 
 @sensitive_post_parameters("password")
+@require_http_methods(["GET", "POST"])
 def login_view(request):
     error = ""
+    username = ""
     if request.method == "POST":
         username = request.POST.get("username", "")[:150]
+        password = request.POST.get("password", "")
         keys = [salted_hmac("login", "account:" + username.casefold()).hexdigest(), salted_hmac("login", "ip:" + request.META.get("REMOTE_ADDR", "")).hexdigest()]
         with transaction.atomic():
             guards = [LoginGuard.objects.select_for_update().get_or_create(key=key)[0] for key in sorted(keys)]
             blocked = any(g.locked_until and g.locked_until > timezone.now() for g in guards)
-            user = None if blocked else authenticate(request, username=username, password=request.POST.get("password", ""))
+            user = None if blocked or len(password) > 1024 else authenticate(request, username=username, password=password)
             if user is not None:
                 for guard in guards:
                     guard.failures = 0
@@ -51,7 +54,7 @@ def login_view(request):
                         guard.failures = 0
                     guard.save()
         error = "Não foi possível entrar. Confira seus dados ou aguarde 15 minutos se houve várias tentativas."
-    return render(request, "workspace/login.html", {"error": error, "local_demo": getattr(settings, "LOCAL_DEMO", False)})
+    return render(request, "workspace/login.html", {"error": error, "username": username, "local_demo": getattr(settings, "LOCAL_DEMO", False)})
 
 
 @require_POST
@@ -109,6 +112,8 @@ def accept_invitation(request):
                 else:
                     user = User(username=invitation.username)
                     password = request.POST.get("password", "")
+                    if len(password) > 1024:
+                        raise ValidationError("A senha deve ter no máximo 1024 caracteres.")
                     validate_password(password, user)
                     user.set_password(password)
                     user.save()

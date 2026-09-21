@@ -349,6 +349,10 @@ class CampaignProfile(CampaignScopedModel):
 
 
 class Territory(CampaignScopedModel):
+    area_kind = models.CharField(max_length=20, choices=[("operation", "Território operacional"), ("district", "Distrito"), ("neighborhood", "Bairro"), ("community", "Comunidade")], default="operation")
+    boundary = models.JSONField(default=dict, blank=True)
+    source_reference = models.CharField(max_length=500, blank=True)
+    public_area_confirmed = models.BooleanField(default=False)
     name = models.CharField("Nome do território", max_length=120)
     municipality = models.CharField("Município", max_length=120)
     state = models.CharField("UF", max_length=2)
@@ -359,6 +363,10 @@ class Territory(CampaignScopedModel):
 
     def clean(self):
         super().clean()
+        from .geo_validation import validate_boundary
+        validate_boundary(self.boundary)
+        if self.boundary and (not self.public_area_confirmed or len(self.source_reference.strip()) < 3):
+            raise ValidationError("Identifique a fonte e confirme que o contorno é uma área pública, não uma localização individual.")
         if self.state not in {"AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"}:
             raise ValidationError({"state": "Informe uma UF brasileira válida, em maiúsculas."})
         if self.ibge_code and (len(self.ibge_code) != 7 or not self.ibge_code.isdigit()):

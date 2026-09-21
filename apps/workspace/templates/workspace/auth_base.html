@@ -1,1 +1,33 @@
-{% load static %}<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Nabio Elege · Acesso</title><link rel="stylesheet" href="{% static 'workspace/app.css' %}"></head><body class="auth-body"><main class="auth-layout"><section class="auth-story"><a class="brand" href="{% url 'home' %}"><span class="brand-symbol">n</span>nabio<span class="brand-light">elege</span></a><div><div class="eyebrow">SUA CENTRAL DE CAMPANHA ELEITORAL.</div><h1>Do comitê<br>ao território.<br>A campanha inteira.</h1><p>Cabos eleitorais, equipes de rua, cadastros voluntários e recursos coordenados em um só lugar.</p><div class="story-lines"><span>01 / Território</span><span>02 / Equipe</span><span>03 / Governança</span></div></div><small>Gestão de campanhas eleitorais · Nabio Elege</small></section><section class="auth-content">{% for message in messages %}<div class="notice {{ message.tags }}">{{ message }}</div>{% endfor %}{% block content %}{% endblock %}</section></main></body></html>
+{% load static %}<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>{% block title %}Acesso{% endblock %} · Nabio Elege</title>
+  <link rel="stylesheet" href="{% static 'workspace/app.css' %}">
+  <link rel="stylesheet" href="{% static 'workspace/auth.css' %}">
+  <script src="{% static 'workspace/auth.js' %}" defer></script>
+</head>
+<body class="auth-body">
+  <a href="#access-content" class="skip-link">Ir para o acesso</a>
+  <main class="auth-layout">
+    <section class="auth-story" aria-label="Nabio Elege, gestão de campanhas">
+      <a class="brand" href="{% url 'product_landing' %}" aria-label="Nabio Elege, apresentação do produto"><span class="brand-symbol" aria-hidden="true">n</span>nabio<span class="brand-light">elege</span></a>
+      <div>
+        <div class="eyebrow">GESTÃO POLÍTICA. PRESENÇA NO TERRITÓRIO.</div>
+        <h1>Sua campanha,<br>conectada de<br><em>ponta a ponta.</em></h1>
+        <p>Do planejamento no comitê à operação nas comunidades. Pessoas, territórios e recursos no mesmo lugar.</p>
+        <div class="auth-story-art" aria-hidden="true"><span class="auth-art-layer"></span><span class="auth-art-layer"></span><span class="auth-art-layer">n</span></div>
+        <div class="story-lines"><span>01 / Território</span><span>02 / Equipe</span><span>03 / Governança</span></div>
+      </div>
+      <small>Tecnologia para organizar. Responsabilidade para cuidar.</small>
+    </section>
+    <section class="auth-content" id="access-content" tabindex="-1" aria-label="Acesso à plataforma">
+      <a class="auth-back-link" href="{% url 'product_landing' %}">← Conheça o produto</a>
+      {% for message in messages %}<div class="notice {{ message.tags }}" role="status">{{ message }}</div>{% endfor %}
+      {% block content %}{% endblock %}
+    </section>
+  </main>
+</body>
+</html>

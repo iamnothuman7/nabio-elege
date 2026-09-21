@@ -1,1 +1,23 @@
-{% extends 'workspace/auth_base.html' %}{% block content %}<div class="auth-card"><div class="eyebrow">BEM-VINDO DE VOLTA</div><h2>Acesse sua área de trabalho</h2><p class="muted">Entre com a conta vinculada à sua organização.</p>{% if local_demo %}<div class="notice">Demonstração local. Use as credenciais fornecidas na entrega. Não insira dados reais.</div>{% endif %}{% if error %}<div class="notice error" role="alert">{{ error }}</div>{% endif %}<form method="post">{% csrf_token %}<label for="username">Usuário</label><input id="username" name="username" autocomplete="username" required maxlength="150" autofocus><label for="password">Senha</label><input id="password" name="password" type="password" autocomplete="current-password" required><button class="button wide" type="submit">Entrar na plataforma <span>→</span></button></form><p class="auth-bottom">Recebeu um convite? <a href="{% url 'accept_invitation' %}">Ative seu acesso</a></p><small class="muted">Seu acesso é limitado às campanhas e permissões do seu vínculo.</small></div>{% endblock %}
+{% extends 'workspace/auth_base.html' %}
+{% block title %}Entrar na plataforma{% endblock %}
+{% block content %}
+<div class="auth-card">
+  <div class="eyebrow">SEU PRÓXIMO PASSO COMEÇA AQUI</div>
+  <h2>Bom ter você de volta.</h2>
+  <p class="muted">Acesse sua central de campanha e acompanhe<br>o que acontece em cada território.</p>
+  {% if local_demo %}<div class="notice">Demonstração local · dados fictícios.<br>Use a conta fornecida na entrega. Não insira dados reais.</div>{% endif %}
+  {% if error %}<div class="notice error" id="login-error" role="alert">{{ error }}</div>{% endif %}
+  <form method="post" action="{% url 'login' %}">
+    {% csrf_token %}
+    <label for="username">Nome de usuário</label>
+    <input id="username" name="username" value="{{ username }}" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Seu usuário na organização" required maxlength="150"{% if error %} aria-describedby="login-error" aria-invalid="true"{% endif %}>
+    <label for="password">Senha</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Digite sua senha" required maxlength="1024"{% if error %} aria-describedby="login-error" aria-invalid="true"{% endif %}>
+    <div class="auth-form-row"><span class="auth-session-note">Uso pessoal e intransferível</span><a href="{% url 'access_help' %}">Esqueci minha senha</a></div>
+    <button class="button wide" type="submit">Entrar na plataforma <span aria-hidden="true">↗</span></button>
+  </form>
+  <p class="auth-bottom">Sua primeira vez por aqui? <a href="{% url 'accept_invitation' %}">Ativar convite →</a></p>
+  <div class="auth-security-caption"><span aria-hidden="true">◇</span><div>Acesso por organização e permissões.<br>Em um computador compartilhado, saia da conta ao terminar.</div></div>
+  <noscript><p class="muted">Você pode entrar normalmente sem JavaScript. Apenas a opção de mostrar senha fica indisponível.</p></noscript>
+</div>
+{% endblock %}

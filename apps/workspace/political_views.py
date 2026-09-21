@@ -29,7 +29,10 @@ def operational_map_data(context, territory_id=None):
         for activity in queryset:
             activities.append({"id": str(activity.pk), "base_id": str(activity.base_id), "title": activity.title, "starts": timezone.localtime(activity.starts_at).strftime("%d/%m %H:%M"), "url": reverse("module_detail", args=[campaign.pk, "acoes-de-rua", activity.pk])})
     # Never add electors, contact details, home addresses or voting preferences here.
-    return {"points": points, "activities": activities, "has_field_access": "field.manage.campaign" in permissions}
+    areas = Territory.objects.filter(campaign=campaign, status="active", public_area_confirmed=True).exclude(boundary={})
+    if territory_id:
+        areas = areas.filter(pk=territory_id)
+    return {"points": points, "activities": activities, "areas": [{"id": str(area.pk), "name": area.name, "kind": area.get_area_kind_display(), "geometry": area.boundary, "source": area.source_reference, "municipality": area.municipality, "state": area.state, "url": reverse("module_detail", args=[campaign.pk, "territorios", area.pk])} for area in areas[:500]], "has_field_access": "field.manage.campaign" in permissions}
 
 
 @login_required
@@ -65,5 +68,9 @@ def campaign_map(request, campaign_id):
         selected = None
     data = operational_map_data(context, selected.pk if selected else None)
     context.update(title="Mapa da campanha", active="map", map_enabled=True, map_data=data, territories=territories, selected_territory=selected, points=data["points"])
+    context["can_manage_territories"] = "territories.manage.campaign" in context["permissions"] and context["campaign"].phase != "archived"
+    data["geography_url"] = reverse("geography_layer", args=[campaign_id, "catalogo", "BR"]).replace("catalogo/BR/", "")
+    data["create_area_url"] = reverse("create_map_area", args=[campaign_id])
+    data["national_explorer"] = True
     request.maps_enabled = True
     return render(request, "workspace/map.html", context)

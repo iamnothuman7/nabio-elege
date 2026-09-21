@@ -86,8 +86,10 @@ def user_error(request, exc):
         messages.error(request, "O registro não está disponível, foi alterado ou o comando já foi utilizado. Recarregue a página.")
 
 
-@login_required
 def home(request):
+    if not request.user.is_authenticated:
+        from .marketing_views import landing
+        return landing(request)
     campaigns = campaigns_for_user(request.user).select_related("tenant").order_by("name")
     if campaigns.count() == 1:
         return redirect("dashboard", campaign_id=campaigns.first().pk)

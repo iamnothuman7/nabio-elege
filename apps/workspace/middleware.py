@@ -32,7 +32,7 @@ class AccessSecurityMiddleware:
             if stamp != profile.session_version or not request.user.is_active:
                 logout(request)
                 return redirect("login")
-            public_path = request.path.startswith("/f/") or request.path.startswith("/api/v1/public/") or request.path == "/api/healthz"
+            public_path = request.path.startswith("/f/") or request.path.startswith("/api/v1/public/") or request.path in {"/api/healthz", "/produto/", "/ajuda-acesso/"}
             if profile.password_change_required and request.path not in {"/senha/", "/sair/", "/entrar/"} and not public_path:
                 if request.path.startswith("/api/"):
                     return JsonResponse({"code": "password_change_required", "detail": "Troque a senha inicial antes de continuar."}, status=403)

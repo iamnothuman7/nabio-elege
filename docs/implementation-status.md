@@ -1,6 +1,6 @@
 # Estado de implementação
 
-Atualizado em 2026-09-20. “Parcial” significa que há interface ou fluxo executável, mas o módulo ainda não atende todos os requisitos e critérios de aceite da especificação v1.0. A demonstração contém dados fictícios e não está homologada para produção.
+Atualizado em 2026-09-21. “Parcial” significa que há interface ou fluxo executável, mas o módulo ainda não atende todos os requisitos e critérios de aceite da especificação v1.0. A demonstração contém dados fictícios e não está homologada para produção.
 
 | Módulo | Estado | Entrega disponível |
 | --- | --- | --- |
@@ -34,14 +34,15 @@ Atualizado em 2026-09-20. “Parcial” significa que há interface ou fluxo exe
 
 O cadastro de eleitores é voluntário e administrativo, não uma lista comprada nem uma base de intenção de voto. Os registros manuais entram pendentes, com finalidade e evidência; revisão não substitui a confirmação externa do canal. Nomes e contatos ficam cifrados e o acesso é limitado ao responsável ou a uma permissão global explícita da campanha. A busca exata de contato utiliza POST para não expor o dado em URLs.
 
-O mapa utiliza apenas comitês e outros pontos operacionais declarados públicos. Ele não mostra domicílios, contatos ou preferências individuais. Cabos eleitorais são gerenciados como equipe: vínculo operacional, território, base, treinamento e escala; não recebem perfis ou pontuações de persuasão de eleitores.
+O mapa navega por Brasil, regiões, UFs e municípios, com limites simplificados e distritos da API do IBGE. Bairros e comunidades podem ser desenhados pela equipe, com fonte e confirmação de área pública; não são apresentados como uma base oficial nacional completa. Os pontos operacionais são comitês e outros locais declarados públicos. Não aparecem domicílios, contatos ou preferências individuais. Cabos eleitorais são gerenciados como equipe: vínculo operacional, território, base, treinamento e escala; não recebem perfis ou pontuações de persuasão de eleitores.
 
 Os dados de demonstração não indicam candidatura, partido, número ou data eleitoral reais. Fortaleza é uma região ilustrativa inicial, editável pelo usuário.
 
 ## Bloqueios para piloto com dados reais
 
 - Provisionar HTTPS, segredos independentes, PostgreSQL, Redis, workers, armazenamento privado, backups e ClamAV real. A demonstração SQLite não serve como produção.
-- Implementar e homologar RLS no PostgreSQL; ampliar testes concorrentes. Dois testes concorrentes de estoque passaram no PostgreSQL real (saída concorrente e recebimento idempotente), mas não representam uma auditoria completa de concorrência.
+- Homologar o RLS já implementado em 73 tabelas PostgreSQL, configurar papéis separados e ampliar testes concorrentes. A suíte de isolamento passou com papel restrito no PostgreSQL 17.10; isso não substitui revisão independente nem validação da topologia de produção. Ver `rls.md` para limites e incompatibilidade de rollout com código antigo.
+- Configurar e homologar recuperação de senha por canal verificado. A tela de ajuda não simula envio de e-mail e não existe recuperação automática nesta versão. Homologar também os limitadores de acesso atrás do proxy real.
 - Completar confirmação de canais, governança de finalidades, treinamento e direitos de privacidade; implementar retenção, bloqueio legal e descarte também em backups.
 - Homologar orçamento comprometido, alçadas, documentos obrigatórios, arrecadação, regras contábeis e formatos oficiais com responsáveis qualificados. Não há certificação ou transmissão ao TSE.
 - Homologar o novo controle de acesso por caso jurídico e completar cotações e versionamento de dados bancários. Transferências em trânsito e expiração de reservas já estão implementadas; a homologação ampla de concorrência permanece necessária.
@@ -50,6 +51,18 @@ Os dados de demonstração não indicam candidatura, partido, número ou data el
 - Executar testes de carga, restauração, segurança e acessibilidade e homologar os dois ciclos completos da especificação.
 
 ## Evidências e limites da validação
+
+### Continuação: login, apresentação, mapa nacional e isolamento
+
+- Landing page pública em `/produto/` e na página inicial anônima, com composição 3D em CSS, respeito à redução de movimento, abas por teclado, perguntas frequentes e avisos explícitos de produto em desenvolvimento. Não inclui preços, clientes ou certificações fictícias.
+- Login redesenhado em `/entrar/`, responsivo, com mostrar/ocultar senha, aviso de Caps Lock, usuário preservado após erro, senha nunca devolvida e mensagens genéricas. Mantém CSRF, limites de tentativas, troca obrigatória, MFA, convites e revogação de sessões. `/ajuda-acesso/` esclarece os limites da recuperação.
+- Navegação nacional com seleção de região/UF/município, busca local, camadas, ampliação e desenho de áreas públicas. Geometrias são limitadas a 200 vértices, validadas contra cruzamentos e gravadas com idempotência e permissão de campanha. O proxy IBGE tem URLs fixas, cache público, timeout, limites de tamanho comprimido/descomprimido e recusa redirecionamentos.
+- RLS habilitado e forçado, contexto transacional no servidor, roteamento público por token e workers com campanha explícita. Auditoria jurídica da API agora respeita a mesma visibilidade por caso da interface. Implementação de isolamento registrada no commit `993417b`.
+- **166 testes passaram em PostgreSQL 17.10/Python 3.11**, em cluster local exclusivo e bancos sintéticos novos. A mesma suíte passou em SQLite com **23 skips esperados** (21 de RLS e dois de concorrência). Compilação de **28 templates**, `collectstatic` de 146 arquivos, análise estática, sintaxe dos quatro scripts JavaScript novos/alterados e ausência de migrations pendentes também verificadas.
+- Consulta real ao IBGE conferiu 27 UFs, 184 municípios/limites no Ceará e limite/distritos de Fortaleza. Login e landing page conferidos visualmente em desktop e celular; alternância de senha, erro, limpeza da senha e abas por teclado verificados. A inspeção visual autenticada do novo mapa continua pendente: a sessão local anterior expirou e não foi substituída sem o usuário.
+- Backup local antes de aplicar `core.0002` e `workspace.0008` à demonstração SQLite. Nenhum recurso de produção foi alterado. O provisionador legado de QA está bloqueado antes de efeitos; não elevar privilégios de uma conta no servidor compartilhado para executar testes de RLS.
+
+A recuperação automática por e-mail, CI desta revisão, revisão independente, staging completo e critérios de produção continuam pendentes. A validação local não autoriza publicação de dados reais. O GitHub estava sem credencial neste computador na última tentativa de envio.
 
 ### Continuação: contas, jurídico e cadeia de entrega
 
@@ -60,11 +73,11 @@ Os dados de demonstração não indicam candidatura, partido, número ou data el
 - CI ampliada com análise estática, formato dos novos módulos, auditoria de dependências, Gitleaks no histórico, compilação de templates, collectstatic e artefato de código por SHA após os testes. As únicas exceções do scanner são fingerprints históricos das chaves intencionais de teste/demo, nunca caminhos inteiros.
 - Todos os campos expostos pelos módulos têm rótulos explícitos em português; um teste impede a inclusão de campos sem tradução. A administração jurídica exige escolher a pessoa, sem selecionar um destinatário automaticamente.
 
-Validação local desta entrega: **123 testes, nenhum erro, dois testes concorrentes ignorados no SQLite**; 26 templates compilados; migrations aplicadas apenas à demonstração, após backup. A auditoria das dependências fixadas não encontrou vulnerabilidades conhecidas, e o scanner de segredos passou com as exceções históricas documentadas. Esses resultados são verificações pontuais, não uma certificação de segurança.
+Validação histórica anterior ao RLS: **123 testes, nenhum erro, dois testes concorrentes ignorados no SQLite**; 26 templates compilados; migrations aplicadas apenas à demonstração, após backup. A auditoria das dependências fixadas não encontrou vulnerabilidades conhecidas, e o scanner de segredos passou com as exceções históricas documentadas. Esses resultados são verificações pontuais, não uma certificação de segurança.
 
-O commit principal desta entrega é `b4a6270c1ecfc5959a16846abc376650017b757c`. O envio ao GitHub foi tentado, mas está bloqueado pela ausência de credencial de autenticação neste computador. **A nova CI ainda não foi executada e esta versão não foi validada no PostgreSQL.** Não houve alteração do banco, dos serviços ou da configuração de produção nesta etapa.
+O commit principal da entrega anterior é `b4a6270c1ecfc5959a16846abc376650017b757c`. Naquela etapa, o envio ao GitHub estava bloqueado pela ausência de credencial. Os testes PostgreSQL locais foram executados na continuação acima; a nova CI ainda depende de autenticação/envio. Não houve alteração do banco, dos serviços ou da configuração de produção nessas etapas.
 
-Essas mudanças ainda precisam de revisão independente e staging completo. Controle por caso na aplicação não substitui RLS no PostgreSQL, que continua pendente.
+Essas mudanças ainda precisam de revisão independente e staging completo. Controle por caso na aplicação complementa o RLS PostgreSQL; nenhum deles constitui homologação integral do produto.
 
 ### Evidência da entrega anterior — não substitui a validação atual
 
@@ -77,6 +90,6 @@ Há testes automatizados para páginas dos módulos, isolamento, permissões, ap
 ## Próximas etapas, na ordem de liberação
 
 1. Autenticar o GitHub, enviar a branch e validar a CI desta versão em SQLite/PostgreSQL 14/PostgreSQL 15; abrir PR para revisor independente identificado pelo responsável do projeto.
-2. Completar RLS e demais lacunas de segurança, privacidade e regras de negócio relacionadas acima; registrar os critérios de aceite e as evidências por módulo.
+2. Homologar o RLS implementado e completar as demais lacunas de segurança, privacidade e regras de negócio relacionadas acima; registrar os critérios de aceite e as evidências por módulo.
 3. Provisionar e homologar staging isolado, inclusive antivírus real, filas, arquivos privados, recuperação integral e rollback. A evidência anterior de banco sintético não cobre esse aceite.
 4. Obter a aprovação exigida, confirmar domínio e recursos exclusivos e só então realizar a implantação de produção. Nenhum serviço de outro projeto pode ser alterado por essa entrega.

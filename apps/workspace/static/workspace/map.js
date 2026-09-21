@@ -47,9 +47,23 @@
   const fit = () => {
     if (data.points.length) map.fitBounds(data.points.map(p => [p.latitude, p.longitude]), {padding: [40, 40], maxZoom: 13});
   };
-  fit();
+  if (!data.national_explorer) fit();
   if (!data.points.length) status.textContent = 'Cadastre comitês e pontos públicos para visualizar a operação.';
   document.getElementById('fit-map')?.addEventListener('click', fit);
+  const areaLayer = L.layerGroup().addTo(map);
+  const areaMarkers = new Map();
+  (data.areas || []).forEach(area => {
+    const polygon = L.geoJSON(area.geometry, {style: {color:'#ab7637',weight:2,dashArray:'5 5',fillOpacity:.12}});
+    const popup = document.createElement('div');
+    const title = document.createElement('strong'); title.textContent=area.name;title.className='geo-popup-name';
+    const note = document.createElement('span');note.textContent=`${area.kind} · Área cadastrada pela equipe. Fonte: ${area.source}`;note.className='geo-popup-note';
+    const link=document.createElement('a');link.href=area.url;link.textContent='Abrir cadastro →';popup.append(title,note,link);
+    polygon.bindPopup(popup).addTo(areaLayer);areaMarkers.set(area.id,polygon);
+  });
+  L.control.layers(null, {'Áreas da equipe':areaLayer}, {collapsed:true}).addTo(map);
+  L.control.scale({imperial:false}).addTo(map);
+  document.querySelectorAll('[data-map-area]').forEach(button=>button.addEventListener('click',()=>{const area=areaMarkers.get(button.dataset.mapArea);if(area){areaLayer.addTo(map);map.fitBounds(area.getBounds(),{padding:[35,35]});area.openPopup();}}));
+  window.NabioGeography?.init(map, data);
   document.querySelectorAll('[data-map-point]').forEach(button => button.addEventListener('click', () => {
     const marker = markers.get(button.dataset.mapPoint);
     if (!marker) return;
