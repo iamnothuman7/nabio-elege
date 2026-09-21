@@ -8,17 +8,17 @@
   <link rel="stylesheet" href="{% static 'workspace/app.css' %}">
   <link rel="stylesheet" href="{% static 'workspace/auth.css' %}">
   <script src="{% static 'workspace/auth.js' %}" defer></script>
-</head>
+<link rel="stylesheet" href="{% static 'workspace/brand.css' %}"></head>
 <body class="auth-body">
   <a href="#access-content" class="skip-link">Ir para o acesso</a>
   <main class="auth-layout">
     <section class="auth-story" aria-label="Nabio Elege, gestão de campanhas">
-      <a class="brand" href="{% url 'product_landing' %}" aria-label="Nabio Elege, apresentação do produto"><span class="brand-symbol" aria-hidden="true">n</span>nabio<span class="brand-light">elege</span></a>
+      <a class="brand" href="{% url 'product_landing' %}" aria-label="Nabio Elege, apresentação do produto">{% include 'workspace/brand_logo.html' with white=True %}</a>
       <div>
         <div class="eyebrow">GESTÃO POLÍTICA. PRESENÇA NO TERRITÓRIO.</div>
         <h1>Sua campanha,<br>conectada de<br><em>ponta a ponta.</em></h1>
         <p>Do planejamento no comitê à operação nas comunidades. Pessoas, territórios e recursos no mesmo lugar.</p>
-        <div class="auth-story-art" aria-hidden="true"><span class="auth-art-layer"></span><span class="auth-art-layer"></span><span class="auth-art-layer">n</span></div>
+        <div class="auth-story-art" aria-hidden="true"><span class="auth-art-layer"></span><span class="auth-art-layer"></span><span class="auth-art-layer">{% include 'workspace/brand_logo.html' with white=True mark=True decorative=True %}</span></div>
         <div class="story-lines"><span>01 / Território</span><span>02 / Equipe</span><span>03 / Governança</span></div>
       </div>
       <small>Tecnologia para organizar. Responsabilidade para cuidar.</small>

@@ -77,6 +77,8 @@ jobs:
         run: ruff format --check apps/core/rls.py apps/core/rls_schema_v1.py apps/core/scope_middleware.py apps/core/test_rls.py apps/core/management/commands/check_rls.py
       - name: Check formatting of trusted proxy handling
         run: ruff format --check apps/core/client_address.py apps/core/test_client_address.py
+      - name: Check formatting of brand regression tests
+        run: ruff format --check apps/workspace/test_brand.py
       - run: python -m pip_audit -r requirements-production.lock --require-hashes --strict --progress-spinner off --timeout 20
       - name: Scan full Git history for secrets
         shell: bash

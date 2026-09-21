@@ -52,6 +52,14 @@ Os dados de demonstração não indicam candidatura, partido, número ou data el
 
 ## Evidências e limites da validação
 
+### Identidade oficial — 2026-09-21
+
+- Logo fornecida pelo proprietário incorporada sem alteração do PNG; hash e dimensões protegidos por teste. Versão colorida sobre branco, versão inteiramente branca por CSS sobre verde, com transparência e proporção preservadas.
+- Verdes extraídos do arquivo: `#117444` e `#42B04A`. Tokens comuns aplicados à landing page, acesso, painel e formulários públicos. Símbolo original enquadrado para os elementos decorativos 3D; nenhum lettering foi recriado.
+- Seis novos testes verificam o ativo, variantes, nome acessível, integração nos templates e contraste dos principais pares de texto. A suíte SQLite executou **184 testes, sem falhas, com 23 skips exclusivos de PostgreSQL**. Compilados **29 templates** e verificado o empacotamento dos dois novos arquivos estáticos; análise estática aprovada.
+- Login e landing page inspecionados em navegador desktop e em largura móvel; carregamento da imagem, variantes de cor e interação das abas conferidos. Isso não substitui auditoria completa de acessibilidade ou homologação do painel autenticado.
+- Regras de aplicação documentadas em `docs/identidade-visual.md`. Esta entrega visual não altera os bloqueios de produção nem declara conclusão dos módulos parciais.
+
 ### Publicação no Git e preparação de produção — 2026-09-21
 
 - O envio ao GitHub foi concluído selecionando explicitamente a conta já autorizada para este repositório. A branch `codex/inventory-production-readiness` foi publicada e o [PR #1](https://github.com/iamnothuman7/nabio-elege/pull/1) está aberto para revisão independente. Não houve merge nem autoaprovação.
