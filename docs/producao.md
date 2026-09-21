@@ -1,6 +1,6 @@
 # Implantação isolada — Nabio Elege
 
-**Situação atual (21/09/2026):** staging homologado e versão instalada em produção, ainda com abertura pública bloqueada. A revisão do responsável já foi registrada na conversa. Consulte [o registro de implantação](deploy-2026-09-21.md) para evidências, aprovação, bloqueio de exportação do backup e próximos passos; os registros históricos abaixo não substituem esse estado atual.
+**Situação atual (21/09/2026):** domínio público ativo com HTTPS, revisão `4067669ace32c3f8b46ee61172ca8f887e127f19`, login e nova interface publicados. Foram criadas, a pedido explícito do responsável, duas contas novas: administração da plataforma e cliente demo isolado. Consulte [a release atual](release-interface-platform.md) para testes e limites. A exportação externa de backups não foi autorizada/executada; os backups criptografados permanecem no servidor. Os registros históricos abaixo não substituem este estado.
 
 Roteiro público adaptado ao Nabio Elege. O inventário com IP, portas/PIDs de outros projetos, serviços e resultados do servidor fica exclusivamente no registro operacional privado, fora do Git. Consulte também `regras_servidor.md` e `implementation-status.md`.
 
@@ -51,7 +51,7 @@ HTTPS, cookies seguros e MFA são obrigatórios no perfil de produção. As veri
 9. Ativar somente os serviços próprios sem root, conferir bind/PID/propriedade e trocar `current` atomicamente. Recarregar graciosamente apenas o serviço afetado.
 10. Criar apenas o site Nginx do Nabio Elege. Executar `nginx -t` antes de reload. Não alterar sites existentes.
 11. Com DNS correto e conta ACME autorizada, emitir certificado exclusivo. Validar cadeia, nome, validade, redirecionamento e renovação desse certificado, sem tocar nos demais.
-12. Criar operador inicial com credencial exclusiva, troca obrigatória, MFA e vínculo/papel explícito. `is_superuser` não concede acesso às campanhas; `/admin/` não é a interface do produto.
+12. Criar acessos novos com credenciais exclusivas, troca obrigatória, MFA e vínculo/papel explícito. A administração do produto fica em `/plataforma/`, com alias `/admin/` protegido pelas mesmas regras. `is_superuser` não concede acesso implícito às campanhas: a abertura administrativa cria vínculo explícito e é auditada; não há Django Admin irrestrito.
 13. Verificar login/logout, isolamento, fluxos principais, desktop/celular, console, uploads e saúde interna/externa. Repetir baseline dos outros projetos e registrar o resultado.
 
 ## Saúde e manutenção
