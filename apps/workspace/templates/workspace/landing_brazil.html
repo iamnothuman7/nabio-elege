@@ -1,0 +1,16 @@
+<div class="brazil-explorer" data-brazil-map>
+  <div class="brazil-widget-heading"><span class="brazil-live-dot" aria-hidden="true"></span><span>UM PAÍS. MUITOS TERRITÓRIOS.</span><span class="brazil-dimension">3D</span></div>
+  <div class="brazil-map-stage" aria-label="Visualização tridimensional do Brasil">
+    <div class="brazil-map-ground" aria-hidden="true"></div>
+    <div class="brazil-map-plane">{% include 'workspace/landing_brazil_geometry.html' %}</div>
+    <div class="brazil-map-compass" aria-hidden="true">N<span>↑</span></div>
+    <p class="brazil-map-hint">Arraste para girar · selecione um estado</p>
+  </div>
+  <div class="brazil-map-controls" hidden>
+    <div class="brazil-state-picker"><label for="brazil-state-select">Explore uma unidade da federação</label><select id="brazil-state-select"><option value="">Brasil · visão geral</option><option value="AC">Acre (AC)</option><option value="AL">Alagoas (AL)</option><option value="AP">Amapá (AP)</option><option value="AM">Amazonas (AM)</option><option value="BA">Bahia (BA)</option><option value="CE">Ceará (CE)</option><option value="DF">Distrito Federal (DF)</option><option value="ES">Espírito Santo (ES)</option><option value="GO">Goiás (GO)</option><option value="MA">Maranhão (MA)</option><option value="MT">Mato Grosso (MT)</option><option value="MS">Mato Grosso do Sul (MS)</option><option value="MG">Minas Gerais (MG)</option><option value="PA">Pará (PA)</option><option value="PB">Paraíba (PB)</option><option value="PR">Paraná (PR)</option><option value="PE">Pernambuco (PE)</option><option value="PI">Piauí (PI)</option><option value="RJ">Rio de Janeiro (RJ)</option><option value="RN">Rio Grande do Norte (RN)</option><option value="RS">Rio Grande do Sul (RS)</option><option value="RO">Rondônia (RO)</option><option value="RR">Roraima (RR)</option><option value="SC">Santa Catarina (SC)</option><option value="SP">São Paulo (SP)</option><option value="SE">Sergipe (SE)</option><option value="TO">Tocantins (TO)</option></select></div>
+    <div class="brazil-view-buttons"><button type="button" data-map-turn="-1" aria-label="Girar mapa à esquerda">↶</button><button type="button" data-map-reset aria-label="Restaurar visão do Brasil">⌖</button><button type="button" data-map-turn="1" aria-label="Girar mapa à direita">↷</button></div>
+  </div>
+  <div class="brazil-map-readout" role="status" aria-live="polite" aria-atomic="true"><strong data-map-name>Brasil</strong><span data-map-region>5 regiões · 27 unidades da federação</span></div>
+  <p class="brazil-map-source">Limites simplificados: <a href="https://servicodados.ibge.gov.br/api/docs/malhas?versao=3" target="_blank" rel="noopener noreferrer">IBGE ↗</a> · relevo 3D ilustrativo, sem dados de eleitores.</p>
+  <noscript><p class="brazil-map-source">O mapa continua visível. Ative JavaScript para selecionar estados e girar a visualização.</p></noscript>
+</div>

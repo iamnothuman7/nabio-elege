@@ -21,10 +21,11 @@ STATE = STAGING / "shared/tls-state.json"
 def proxy(root, port):
     return f"""
     client_max_body_size 22m;
+    add_header Strict-Transport-Security "max-age=86400" always;
     access_log /var/log/nginx/nabio-elege-access.log nabio_elege_minimal;
     error_log /var/log/nginx/nabio-elege-error.log warn;
-    location /static/ {{ alias {root}/shared/staticfiles/; add_header X-Content-Type-Options nosniff always; }}
-    location /media/ {{ add_header X-Content-Type-Options nosniff always; return 404; }}
+    location /static/ {{ alias {root}/shared/staticfiles/; add_header X-Content-Type-Options nosniff always; add_header Strict-Transport-Security "max-age=86400" always; }}
+    location /media/ {{ add_header X-Content-Type-Options nosniff always; add_header Strict-Transport-Security "max-age=86400" always; return 404; }}
     location ~ /\\. {{ deny all; }}
     location / {{
         proxy_pass http://127.0.0.1:{port};

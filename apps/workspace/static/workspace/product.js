@@ -4,21 +4,12 @@
   tabs.forEach((tab,index)=>{tab.addEventListener('click',()=>activate(tab));tab.addEventListener('keydown',event=>{let target;if(event.key==='ArrowRight')target=tabs[(index+1)%tabs.length];if(event.key==='ArrowLeft')target=tabs[(index-1+tabs.length)%tabs.length];if(event.key==='Home')target=tabs[0];if(event.key==='End')target=tabs.at(-1);if(target){event.preventDefault();activate(target);target.focus();}});});
   const body = document.body;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-  const toggle = document.querySelector('.motion-toggle');
   const track = document.querySelector('.ribbon-track');
   const group = track?.querySelector('.ribbon-group');
   if (group) { const copy = group.cloneNode(true); copy.setAttribute('aria-hidden', 'true'); track.append(copy); }
-  let pausedByUser = false;
   const syncMotion = () => {
-    body.classList.toggle('motion-paused', pausedByUser || reduced.matches);
-    if (toggle) {
-      toggle.hidden = reduced.matches;
-      toggle.setAttribute('aria-pressed', String(pausedByUser));
-      toggle.querySelector('.motion-toggle-label').textContent = pausedByUser ? 'Retomar animações' : 'Pausar animações';
-      toggle.querySelector('.motion-toggle-icon').textContent = pausedByUser ? '▷' : 'Ⅱ';
-    }
+    body.classList.toggle('motion-paused', reduced.matches);
   };
-  toggle?.addEventListener('click', () => { pausedByUser = !pausedByUser; syncMotion(); });
   reduced.addEventListener('change', syncMotion);
   syncMotion();
   body.classList.add('motion-ready');
@@ -49,7 +40,7 @@
     let frame;
     const reset = () => { cancelAnimationFrame(frame); scene.style.setProperty('--rx', '0deg'); scene.style.setProperty('--ry', '0deg'); };
     scene.addEventListener('pointermove', event => {
-      if (reduced.matches || pausedByUser || event.pointerType !== 'mouse') return;
+      if (reduced.matches || event.pointerType !== 'mouse') return;
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         const rect = scene.getBoundingClientRect();
@@ -59,6 +50,5 @@
     });
     scene.addEventListener('pointerleave', reset);
     reduced.addEventListener('change', reset);
-    toggle?.addEventListener('click', reset);
   });
 })();

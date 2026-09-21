@@ -1,0 +1,74 @@
+#feature-territory { align-items: center; }
+.brazil-explorer {
+  --map-fill: #55a97d;
+  position: relative; min-width: 0; align-self: center; padding: 20px;
+  border-radius: 24px; border: 1px solid #ffffff3d; color: #fff;
+  background: radial-gradient(ellipse at 80% 10%, #42b04a32, transparent 62%), #0a4930;
+  box-shadow: 0 22px 50px #073f261c, inset 0 1px 0 #ffffff26;
+}
+.brazil-widget-heading { display: flex; align-items: center; gap: 9px; color: #d4eddb; font-size: 8px; letter-spacing: 1.2px; line-height: 1.6; }
+.brazil-live-dot { width: 5px; height: 5px; flex: 0 0 auto; border-radius: 50%; background: #9af1b1; box-shadow: 0 0 0 4px #9af1b112; }
+.brazil-dimension { margin-left: auto; border: 1px solid #ffffff33; background: #ffffff08; border-radius: 7px; padding: 3px 6px; letter-spacing: 1px; }
+.brazil-map-stage { height: 340px; position: relative; perspective: 900px; overflow: hidden; touch-action: pan-y; user-select: none; }
+.brazil-map-stage::before { content: ""; position: absolute; inset: 35px 0 45px; background-image: linear-gradient(#ffffff07 1px, transparent 1px), linear-gradient(90deg, #ffffff07 1px, transparent 1px); background-size: 24px 24px; mask-image: radial-gradient(ellipse, #000, transparent 70%); pointer-events: none; }
+.brazil-map-ground { position: absolute; left: 17%; right: 13%; bottom: 38px; height: 50px; border-radius: 50%; background: #001c1170; filter: blur(14px); pointer-events: none; }
+.brazil-map-plane {
+  position: absolute; left: 50%; top: 48%; width: min(94%, 380px); aspect-ratio: 640 / 600;
+  transform: translate(-50%, -50%) rotateX(var(--map-rx, 22deg)) rotateY(var(--map-ry, 0deg)) rotateZ(var(--map-rz, -9deg));
+  transform-style: preserve-3d; transform-origin: center; transition: transform .35s cubic-bezier(.2,.7,.3,1);
+}
+.brazil-ready .brazil-map-stage { cursor: grab; }
+.brazil-dragging .brazil-map-stage { cursor: grabbing; }
+.brazil-dragging .brazil-map-plane { transition: none; }
+.brazil-svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.brazil-state { fill: var(--map-fill); stroke: #d8f9e588; stroke-width: 1.1; stroke-linejoin: round; fill-rule: evenodd; transition: fill .2s, transform .2s; }
+.brazil-map-depth { --map-fill: #0c613c; pointer-events: none; }
+.brazil-map-shadow { --map-fill: #073d27; pointer-events: none; opacity: .6; }
+.brazil-ready #brazil-surfaces .brazil-state { cursor: pointer; }
+.brazil-ready #brazil-surfaces .brazil-state:hover, #brazil-surfaces .brazil-state:focus-visible { fill: #b8f1c9; stroke: #fff; stroke-width: 2.5; outline: none; }
+#brazil-surfaces .brazil-state.is-selected { fill: #d1f5a6; stroke: #fff; stroke-width: 2; transform: translateY(-5px); filter: drop-shadow(0 5px 0 #07522f); }
+#brazil-surfaces .brazil-state.is-region:not(.is-selected) { fill: #7bd19d; }
+.brazil-map-compass { position: absolute; top: 25px; right: 2px; display: grid; gap: 3px; justify-items: center; font-size: 8px; color: #d4eddb; }
+.brazil-map-compass span { font-size: 22px; }
+.feature-panel .brazil-map-hint { position: absolute; bottom: 0; left: 0; width: 100%; text-align: center; font-size: 9px; color: #d4eddb; margin: 0; pointer-events: none; }
+.brazil-map-controls { display: flex; gap: 10px; align-items: end; margin-top: 14px; }
+.brazil-map-controls[hidden] { display: none; }
+.brazil-state-picker { flex: 1; min-width: 0; }
+.brazil-state-picker label { display: block; color: #d4eddb; font-size: 9px; margin-bottom: 7px; }
+.brazil-state-picker select { width: 100%; min-width: 0; height: 44px; padding: 0 8px; border: 1px solid #ffffff36; border-radius: 10px; background: #f3fbf6; color: #073f26; font: inherit; font-size: 12px; }
+.brazil-view-buttons { display: flex; gap: 5px; }
+.brazil-view-buttons button { width: 36px; height: 44px; border: 1px solid #ffffff36; border-radius: 10px; background: #ffffff0d; color: #fff; font-size: 21px; cursor: pointer; }
+.brazil-view-buttons button:hover { background: #ffffff20; }
+.brazil-explorer :focus-visible { outline: 3px solid #d4eddb; outline-offset: 3px; }
+.brazil-map-readout { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 15px 0 12px; margin-top: 12px; border-top: 1px solid #ffffff20; }
+.brazil-map-readout strong { font-size: 15px; font-weight: 550; }
+.brazil-map-readout span { max-width: 62%; text-align: right; font-size: 10px; color: #d4eddb; line-height: 1.6; }
+.feature-panel .brazil-map-source { margin: 0; color: #d4eddb; font-size: 8px; line-height: 1.7; }
+.brazil-map-source a { text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 1150px) and (min-width: 851px) {
+  .brazil-map-controls { flex-wrap: wrap; }
+  .brazil-state-picker { flex-basis: 100%; }
+  .brazil-view-buttons { margin-left: auto; }
+  .brazil-map-stage { height: 290px; }
+}
+@media (max-width: 850px) { .brazil-explorer { margin-top: 14px; } .brazil-map-stage { height: 360px; } .brazil-map-plane { width: min(94%, 400px); } }
+@media (max-width: 480px) {
+  .brazil-explorer { padding: 16px 12px; border-radius: 18px; }
+  .brazil-widget-heading { font-size: 7px; letter-spacing: .7px; gap: 6px; }
+  .brazil-map-stage { height: 275px; }
+  .brazil-map-controls { flex-wrap: wrap; }
+  .brazil-state-picker { flex-basis: 100%; }
+  .brazil-view-buttons { margin-left: auto; }
+  .brazil-map-readout { margin-top: 8px; }
+  .brazil-map-readout span { max-width: 60%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .brazil-map-plane, .brazil-state { transition: none; }
+  .brazil-map-plane { transform: translate(-50%, -50%); }
+  #brazil-surfaces .brazil-state.is-selected { transform: none; }
+}
+@media (forced-colors: active) {
+  .brazil-explorer { background: Canvas; color: CanvasText; border-color: CanvasText; }
+  .brazil-state { fill: Canvas; stroke: CanvasText; }
+  #brazil-surfaces .brazil-state.is-selected { fill: Highlight; stroke: HighlightText; }
+}

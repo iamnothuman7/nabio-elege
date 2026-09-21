@@ -1,9 +1,9 @@
 from django.conf import settings
 from django.shortcuts import render
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_safe
 
 
-@require_GET
+@require_safe
 def landing(request):
     return render(
         request,
@@ -12,6 +12,6 @@ def landing(request):
     )
 
 
-@require_GET
+@require_safe
 def access_help(request):
     return render(request, "workspace/access_help.html")
