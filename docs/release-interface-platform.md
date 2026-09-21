@@ -2,6 +2,8 @@
 
 Atualização de 21/09/2026 solicitada pelo proprietário. A autorização de publicação consta na conversa; ela não deve ser apresentada como aprovação de um revisor independente no GitHub.
 
+Registro da entrega `4067669`. A revisão pública atual é `4f1980b`; a atualização posterior acrescentou [mapa interativo e HSTS](landing-map-https.md) e retirou, a pedido do proprietário, o botão de pausa das animações. Contas e funcionalidades desta entrega foram preservadas.
+
 ## Resultado publicado
 
 Revisão em produção: `4067669ace32c3f8b46ee61172ca8f887e127f19`, em [elege.nabio.pro](https://elege.nabio.pro/). [CI aprovada](https://github.com/iamnothuman7/nabio-elege/actions/runs/35635851080): SQLite/Python 3.11, PostgreSQL 14 e 15/Python 3.12, scanners e artefato. A suíte tem 202 testes; 23 exclusivos de PostgreSQL são ignorados na execução SQLite. A varredura local do histórico Git também não encontrou segredos.

@@ -1,6 +1,8 @@
 # Estado de implementação
 
-Atualizado em 2026-09-21. “Parcial” significa que há interface ou fluxo executável, mas o módulo ainda não atende todos os requisitos e critérios de aceite da especificação v1.0. A demonstração contém dados fictícios e não está homologada para produção.
+Atualizado em 2026-09-21. “Parcial” significa que há interface ou fluxo executável, mas o módulo ainda não atende todos os requisitos e critérios de aceite da especificação v1.0. A demonstração contém dados fictícios; a publicação no domínio de produção não equivale a homologação integral para dados reais.
+
+**Estado operacional vigente:** domínio público com HTTPS/HSTS, infraestrutura isolada e contas de plataforma/demo disponíveis na revisão `4f1980b`. CI, staging, antivírus real e rollback compatível passaram; consulte [as evidências atuais](landing-map-https.md). A infraestrutura antes listada como não provisionada nos registros históricos abaixo já foi instalada e validada conforme [produção](producao.md). Permanecem as lacunas funcionais, revisão independente, homologação para dados reais, recuperação automática por canal verificado, backup/alertas externos e testes amplos de carga/acessibilidade. Os registros históricos não devem ser interpretados como estado operacional atual.
 
 | Módulo | Estado | Entrega disponível |
 | --- | --- | --- |

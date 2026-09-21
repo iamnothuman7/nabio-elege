@@ -1,6 +1,6 @@
 # Implantação isolada — Nabio Elege
 
-**Situação atual (21/09/2026):** domínio público ativo com HTTPS, revisão `4067669ace32c3f8b46ee61172ca8f887e127f19`, login e nova interface publicados. Foram criadas, a pedido explícito do responsável, duas contas novas: administração da plataforma e cliente demo isolado. Consulte [a release atual](release-interface-platform.md) para testes e limites. A exportação externa de backups não foi autorizada/executada; os backups criptografados permanecem no servidor. Os registros históricos abaixo não substituem este estado.
+**Situação atual (21/09/2026):** domínio público ativo com HTTPS e HSTS, revisão `4f1980bf3d38a01ec8b3317784332176c190bf5d`, login e nova interface publicados. As duas contas solicitadas — administração da plataforma e cliente demo isolado — foram preservadas. Consulte [a atualização do mapa/HTTPS](landing-map-https.md) e [a entrega de interface/acessos](release-interface-platform.md) para testes e limites. A exportação externa de backups não foi autorizada/executada; os backups criptografados permanecem no servidor. Os registros históricos abaixo não substituem este estado.
 
 Roteiro público adaptado ao Nabio Elege. O inventário com IP, portas/PIDs de outros projetos, serviços e resultados do servidor fica exclusivamente no registro operacional privado, fora do Git. Consulte também `regras_servidor.md` e `implementation-status.md`.
 
