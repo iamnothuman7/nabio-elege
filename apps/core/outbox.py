@@ -35,8 +35,11 @@ def dispatch_outbox_event(event_id, *, send_task=None):
     if task_name is None:
         _record_failure(event.id, "unsupported_event")
         return False
+    if event.campaign_id is None:
+        _record_failure(event.id, "missing_campaign_context")
+        return False
     try:
-        send_task(task_name, args=[event.aggregate_id])
+        send_task(task_name, args=[event.aggregate_id, str(event.campaign_id)])
     except Exception as exc:
         _record_failure(event.id, type(exc).__name__)
         raise

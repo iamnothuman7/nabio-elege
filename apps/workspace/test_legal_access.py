@@ -242,6 +242,10 @@ class LegalCaseAccessTests(TestCase):
             self.client.get(reverse("audit_log", args=[self.campaign.pk])),
             "Marcador restrito de teste",
         )
+        self.assertNotContains(
+            self.client.get(f"/api/v1/campaigns/{self.campaign.pk}/audit-events"),
+            "Marcador restrito de teste",
+        )
 
     def test_cross_campaign_grants_are_rejected(self):
         other = Campaign.objects.create(

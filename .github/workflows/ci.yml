@@ -73,6 +73,8 @@ jobs:
       - run: ruff check --select E9,F63,F7,F82 apps nabio_elege infra
       - name: Check formatting of new security and release modules
         run: ruff format --check apps/workspace/account_forms.py apps/workspace/legal_access.py apps/workspace/legal_views.py apps/workspace/test_accounts.py apps/workspace/test_legal_access.py apps/workspace/management/commands/bootstrap_operator.py apps/core/test_release.py apps/core/management/commands/check_templates.py infra/check_dependency_lock.py
+      - name: Check formatting of isolation modules
+        run: ruff format --check apps/core/rls.py apps/core/rls_schema_v1.py apps/core/scope_middleware.py apps/core/test_rls.py apps/core/management/commands/check_rls.py
       - run: python -m pip_audit -r requirements-production.lock --require-hashes --strict --progress-spinner off --timeout 20
       - name: Scan full Git history for secrets
         shell: bash

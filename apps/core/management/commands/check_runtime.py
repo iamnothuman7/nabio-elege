@@ -6,6 +6,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
+from apps.core.rls import verify_database_isolation
 
 
 class Command(BaseCommand):
@@ -15,6 +16,7 @@ class Command(BaseCommand):
         checks = {
             "database": self.database,
             "migrations": self.migrations,
+            "isolation": verify_database_isolation,
             "cache": lambda: self.redis_ping(settings.CACHES["default"].get("LOCATION", "")),
             "broker": lambda: self.redis_ping(settings.CELERY_BROKER_URL),
             "antivirus": self.antivirus,

@@ -18,6 +18,7 @@ def production_guardrails(app_configs, **kwargs):
 
     require(not settings.DEBUG and not getattr(settings, "LOCAL_DEMO", False), "E001", "Demonstração e DEBUG são proibidos neste ambiente.")
     require(settings.DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql", "E002", "Use PostgreSQL dedicado em staging/produção.")
+    require("apps.core.scope_middleware.CampaignScopeMiddleware" in settings.MIDDLEWARE, "E013", "O contexto transacional de isolamento deve estar ativo.")
     require(settings.MFA_REQUIRED, "E003", "MFA deve ser obrigatório neste ambiente.")
     require(settings.SESSION_COOKIE_SECURE and settings.CSRF_COOKIE_SECURE and settings.SECURE_SSL_REDIRECT, "E004", "Exija HTTPS e cookies seguros.")
     hosts = settings.ALLOWED_HOSTS

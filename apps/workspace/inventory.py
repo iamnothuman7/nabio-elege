@@ -37,9 +37,25 @@ def expire_item_reservations_locked(item, *, now=None):
 
 def expire_due_reservations(*, limit=500, now=None):
     """Retry-safe periodic cleanup; archived and inactive campaigns stay untouched."""
+    from apps.core.rls import current_scope, database_scope
+
+    campaigns = Campaign.objects.filter(tenant__status="active").exclude(phase="archived").order_by("pk")
+    if current_scope().campaign_id:
+        campaigns = campaigns.filter(pk=current_scope().campaign_id)
+    count = 0
+    for campaign in campaigns.iterator():
+        if count >= limit:
+            break
+        with database_scope(campaign=campaign):
+            count += _expire_campaign_reservations(limit=limit - count, now=now)
+    return count
+
+
+def _expire_campaign_reservations(*, limit, now):
+    from apps.core.rls import current_scope
     now = now or timezone.now()
     item_ids = list(StockReservation.objects.filter(
-        status="active", expires_at__lte=now, campaign__tenant__status="active",
+        status="active", expires_at__lte=now, campaign__tenant__status="active", campaign_id=current_scope().campaign_id,
     ).exclude(campaign__phase="archived").order_by("item_id").values_list("item_id", flat=True).distinct()[:limit])
     count = 0
     for item_id in item_ids:

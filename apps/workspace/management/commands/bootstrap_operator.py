@@ -11,6 +11,7 @@ from django.db import IntegrityError, transaction
 
 from apps.campaigns.models import Campaign, Membership, Permission, Role, Tenant
 from apps.core.services import append_audit_event
+from apps.core.rls import database_scope
 from apps.workspace.models import SecurityProfile
 
 
@@ -99,18 +100,19 @@ class Command(BaseCommand):
                     role=role,
                     status="active",
                 )
-                append_audit_event(
-                    actor=user,
-                    tenant=tenant,
-                    campaign=campaign,
-                    action="security.operator_bootstrapped",
-                    resource_type="user",
-                    resource_id=user.pk,
-                    minimized_diff={
-                        "permissions": sorted(codes),
-                        "password_change_required": True,
-                    },
-                )
+                with database_scope(campaign=campaign, actor=user):
+                    append_audit_event(
+                        actor=user,
+                        tenant=tenant,
+                        campaign=campaign,
+                        action="security.operator_bootstrapped",
+                        resource_type="user",
+                        resource_id=user.pk,
+                        minimized_diff={
+                            "permissions": sorted(codes),
+                            "password_change_required": True,
+                        },
+                    )
         except (ValidationError, IntegrityError) as exc:
             # Do not serialize arbitrary validation/provider messages or inputs.
             raise CommandError(
