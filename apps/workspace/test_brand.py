@@ -100,6 +100,13 @@ class BrandIdentityTests(SimpleTestCase):
         self.assertEqual(tokens["brand-primary"], "#117444")
         self.assertEqual(tokens["brand-accent"], "#42b04a")
         self.assertIn("filter: brightness(0) invert(1)", css)
+        self.assertIn(
+            "input::placeholder, textarea::placeholder { color: var(--brand-muted); opacity: 1; }",
+            css,
+        )
+        self.assertIn("outline: 3px solid var(--brand-primary)", css)
+        self.assertIn("outline-color: var(--brand-on-dark)", css)
+        self.assertNotIn("outline: 3px solid var(--brand-accent)", css)
 
         def luminance(color):
             channels = [int(color[i : i + 2], 16) / 255 for i in (1, 3, 5)]
@@ -115,6 +122,7 @@ class BrandIdentityTests(SimpleTestCase):
             ("#ffffff", tokens["brand-primary"]),
             ("#052e1b", tokens["brand-accent"]),
             (tokens["brand-primary"], "#ffffff"),
+            (tokens["brand-muted"], "#ffffff"),
             (tokens["brand-muted"], tokens["brand-soft"]),
             (tokens["brand-on-dark"], tokens["brand-deep"]),
         ):

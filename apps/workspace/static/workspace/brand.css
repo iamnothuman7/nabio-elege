@@ -118,6 +118,7 @@ body.product-page { color: var(--ink); }
 .auth-art-layer .brand-logo--mark { width: 76px; }
 .password-toggle, .auth-form-row a { color: var(--brand-primary); }
 .auth-session-note, .auth-back-link, .auth-help { color: var(--brand-muted); }
+input::placeholder, textarea::placeholder { color: var(--brand-muted); opacity: 1; }
 .auth-security-caption { background: var(--brand-soft); border-color: var(--brand-line); color: var(--brand-muted); }
 .auth-security-caption > span { color: var(--brand-primary); }
 .auth-card .auth-bottom { border-color: var(--brand-line); }
@@ -136,8 +137,13 @@ body.product-page { color: var(--ink); }
 .election-countdown a { color: var(--brand-on-dark); }
 .brand:focus-visible, .product-page :focus-visible, .auth-card :focus-visible,
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
-  outline: 3px solid var(--brand-accent);
+  outline: 3px solid var(--brand-primary);
   outline-offset: 4px;
+}
+.product-hero :focus-visible, .product-territory :focus-visible,
+.product-cta :focus-visible, .product-footer :focus-visible,
+.auth-story :focus-visible, .sidebar :focus-visible, .candidate-hero :focus-visible {
+  outline-color: var(--brand-on-dark);
 }
 @media (max-width: 760px) {
   .auth-story .brand-logo { width: 255px; }
