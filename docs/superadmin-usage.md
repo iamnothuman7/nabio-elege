@@ -1,6 +1,6 @@
 # Superadministrador, uso e identidade compacta
 
-Atualização solicitada em 22/09/2026. Mantém a conta proprietária e a demonstração existentes; não redefine senhas, não cria administradores duplicados e não modifica RLS ou migrations.
+Atualização de acesso solicitada em 22/09/2026: duas contas explicitamente autorizadas podem usar senha definitiva e MFA opcional. O histórico abaixo registra a publicação anterior; a mudança de acesso tem registro operacional próprio. Não modifica RLS ou migrations.
 
 ## Administração
 
@@ -9,7 +9,17 @@ Atualização solicitada em 22/09/2026. Mantém a conta proprietária e a demons
 - Suspensão/reativação de acessos e encerramento de sessões de clientes. A própria conta administrativa e outras contas administrativas são protegidas dessas ações.
 - Acesso a campanha e à sua auditoria por POST com CSRF, vínculo explícito e evento auditado. Sigilo jurídico e demais permissões continuam aplicados.
 - `/plataforma/atividade/`: eventos imutáveis da própria conta administrativa, com busca, categoria e paginação. Os eventos operacionais de clientes ficam nas respectivas campanhas; não há exportação de logs brutos de servidor, segredos ou dados sigilosos.
-- Conta proprietária é persistente, sem vencimento de acesso. As senhas iniciais são entregues somente na conversa; a senha pessoal definitiva e o MFA são configurados pelo proprietário no primeiro acesso. Recuperação automática por e-mail ainda não está implementada.
+- Conta proprietária é persistente, sem vencimento de acesso. Por solicitação expressa do proprietário, suas duas contas recebem senhas definitivas, sem troca inicial nem MFA obrigatório. Senhas entregues somente na conversa; recuperação automática por e-mail ainda não está implementada.
+
+## Acesso direto por autorização explícita
+
+`prepare_direct_access` exige duas contas existentes, um único vínculo ativo demo, senhas distintas de pelo menos 20 caracteres por stdin e confirmação explícita `--confirm-password-only`. A transação altera apenas essas contas, revoga suas sessões/fatores anteriores e registra auditoria sem segredos. Não é exposto por formulário ou API de cliente.
+
+O grupo reservado `nabio-password-only-access` não concede permissões. Ele permite não cadastrar MFA; um fator posteriormente ativado continua obrigatório no próximo login. A política padrão permanece exigindo MFA para outras contas. HTTPS, CSRF, bloqueios de login e limites de campanha não são desativados. Login só com senha possui proteção menor contra comprometimento da senha, especialmente no superadministrador.
+
+O antigo usuário demo é renomeado e mantém sua identidade no histórico. Seu vínculo demo é revogado; registros sintéticos são preservados, sem migração ou exclusão. Uma organização/campanha real vazia recebe o novo vínculo, com os mesmos direitos de cliente e nenhum privilégio global. Cargo, eleição e abrangência ficam explicitamente a configurar; não há inferência de número eleitoral a partir da senha.
+
+Rollback de código anterior volta a exigir MFA; os dados e os hashes das novas senhas permanecem. Não restaurar banco nem reexecutar a conversão: ela recusa conta já convertida. Não reativar as credenciais antigas.
 
 ## Métricas: o que os números significam
 

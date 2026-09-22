@@ -20,7 +20,7 @@ from apps.core.crypto import decrypt_json, encrypt_json, hash_token
 from apps.core.client_address import client_address
 from apps.core.services import append_audit_event
 from .models import Invitation, LoginGuard, SecurityProfile
-from .security import new_totp_secret, verify_second_factor
+from .security import new_totp_secret, requires_second_factor, verify_second_factor
 
 
 @sensitive_post_parameters("password")
@@ -46,7 +46,7 @@ def login_view(request):
                 request.session["security_version"] = profile.session_version
                 if profile.password_change_required:
                     return redirect("password_change")
-                return redirect("security" if settings.MFA_REQUIRED or profile.enabled_at else "home")
+                return redirect("security" if requires_second_factor(user, profile) else "home")
             if not blocked:
                 for guard in guards:
                     guard.failures += 1
@@ -94,7 +94,7 @@ def security_view(request):
         else:
             error = "Código inválido, já utilizado ou temporariamente bloqueado."
     secret = decrypt_json(profile.totp_secret_ciphertext)["secret"] if not profile.enabled_at else ""
-    return render(request, "workspace/security.html", {"secret": secret, "codes": codes, "error": error, "enabled": bool(profile.enabled_at)})
+    return render(request, "workspace/security.html", {"secret": secret, "codes": codes, "error": error, "enabled": bool(profile.enabled_at), "optional": not requires_second_factor(request.user, profile)})
 
 
 @sensitive_post_parameters("password", "token")
@@ -178,5 +178,5 @@ def password_change(request):
             else:
                 request.session.pop("mfa_version", None)
             messages.success(request, "Senha alterada. As outras sessões foram encerradas.")
-            return redirect("security" if settings.MFA_REQUIRED and not profile.enabled_at else "home")
+            return redirect("security" if requires_second_factor(user, profile) and not profile.enabled_at else "home")
     return render(request, "workspace/password_change.html", {"form": form, "required": profile.password_change_required})

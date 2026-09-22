@@ -7,12 +7,25 @@ import struct
 import time
 from datetime import timedelta
 
-from django.core.exceptions import ValidationError
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
 from apps.core.crypto import decrypt_json, hash_token
 from .models import SecurityProfile
+
+
+# Assigned only by the audited management operation, never through customer forms.
+# This group grants no permissions and does not bypass an already enabled factor.
+PASSWORD_ONLY_GROUP = "nabio-password-only-access"
+
+
+def requires_second_factor(user, profile):
+    if profile.enabled_at:
+        return True
+    return settings.MFA_REQUIRED and not user.groups.filter(
+        name=PASSWORD_ONLY_GROUP
+    ).exists()
 
 
 def new_totp_secret():

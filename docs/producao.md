@@ -36,7 +36,7 @@ Usar `DJANGO_SETTINGS_MODULE=nabio_elege.production_settings`. Esse perfil não 
 - `TRUSTED_PROXY_IPS`: lista de IPs exatos do proxy imediato, por exemplo `127.0.0.1,::1` quando Nginx e Gunicorn compartilham o servidor. Sem essa lista, `X-Real-IP` é ignorado. Não copiar endereços de visitantes nem aceitar coringas/redes.
 - `SECURE_HSTS_SECONDS`: manter zero até confirmar HTTPS. Não habilitar includeSubDomains/preload automaticamente.
 
-HTTPS, cookies seguros e MFA são obrigatórios no perfil de produção. As verificações de deployment recusam SQLite, cache local, segredos conhecidos de demonstração, hosts coringa e mistura entre arquivos públicos/privados. Essas verificações não substituem auditoria de segurança.
+HTTPS e cookies seguros são obrigatórios no perfil de produção. MFA é a política padrão; há exceção por conta, explícita e auditada, para acesso direto solicitado pelo proprietário (ver `superadmin-usage.md`). As verificações de deployment recusam SQLite, cache local, segredos conhecidos de demonstração, hosts coringa e mistura entre arquivos públicos/privados. Essas verificações não substituem auditoria de segurança.
 
 ## Etapas e critérios de avanço
 

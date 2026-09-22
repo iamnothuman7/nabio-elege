@@ -114,7 +114,17 @@ def dashboard(request):
     campaigns = Campaign.objects.select_related("tenant").order_by(
         "tenant__name", "name"
     )
-    users = User.objects.select_related("securityprofile").order_by("username")
+    from .security import PASSWORD_ONLY_GROUP
+
+    users = (
+        User.objects.select_related("securityprofile")
+        .annotate(
+            password_only_access=Count(
+                "groups", filter=Q(groups__name=PASSWORD_ONLY_GROUP)
+            )
+        )
+        .order_by("username")
+    )
     if query:
         tenants = tenants.filter(Q(name__icontains=query) | Q(slug__icontains=query))
         campaigns = campaigns.filter(

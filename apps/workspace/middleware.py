@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.contrib.auth import logout
 from django.http import JsonResponse
 from django.shortcuts import redirect
@@ -7,6 +6,7 @@ from django.utils.crypto import salted_hmac
 import time
 
 from .models import SecurityProfile
+from .security import requires_second_factor
 from .platform_metrics import record_page_view
 from apps.core.client_address import client_address
 
@@ -47,7 +47,7 @@ class AccessSecurityMiddleware:
             # The password-change view verifies both the current password and
             # a fresh second factor itself when MFA is already enabled.
             exempt = request.path in {"/seguranca/", "/senha/", "/sair/", "/entrar/"} or public_path
-            if (settings.MFA_REQUIRED or profile.enabled_at) and not exempt:
+            if not exempt and requires_second_factor(request.user, profile):
                 if not profile.enabled_at or request.session.get("mfa_version") != profile.session_version:
                     if request.path.startswith("/api/"):
                         return JsonResponse({"code": "mfa_required", "detail": "Conclua a autenticação em dois fatores."}, status=403)
