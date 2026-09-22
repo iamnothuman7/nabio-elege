@@ -24,4 +24,13 @@ Logo preservada em pixels/proporção, reduzida no menu público (200 px desktop
 
 Mapa: hover e seleção usam elevação de 8 unidades SVG, sem outline/box-shadow retangular nem destaque de toque nativo. Ao selecionar outro estado, o anterior volta ao plano; teclado mantém foco sobre o contorno geográfico. Preferência de movimento reduzido mantém a seleção sem movimento. Os demais controles preservam foco visível.
 
-Testes e evidências de publicação devem ser registrados após a validação da revisão exata. Esta atualização não declara todos os módulos do produto completos; consulte `implementation-status.md`.
+## Evidências de publicação — 22/09/2026
+
+- Revisão pública: `b3823fa158a04fa53562f1f8cde1ed745d3904b7`. [CI aprovada](https://github.com/iamnothuman7/nabio-elege/actions/runs/35720728478) em SQLite/Python 3.11, PostgreSQL 14/15/Python 3.12, scanners e artefato.
+- 219 testes locais, sem falhas, 23 skips específicos de PostgreSQL; 38 templates compilados, análise estática/formatação aprovadas e nenhuma migration pendente. Histórico Git sem segredos encontrados pelo scanner.
+- Staging da revisão exata: 105 requisições HTTPS nos módulos existentes (44 listas/42 formulários, MFA, CSRF, isolamento, arquivos privados e antivírus real), mais 51 requisições nos fluxos de plataforma, cliente e novo usuário. Criação com papel explícito, negação de privilégios globais, acesso cruzado negado, contagens reais em Redis e revogação de sessões aprovados. Contas sintéticas desativadas ao final.
+- Rollback compatível ensaiado em staging e retorno à candidata; backup criptografado prévio ao rollout. Sem alterações de banco/schema, dependências, Nginx ou outros projetos. Workers confirmados na nova revisão; staging desligado após os testes.
+- Conferência visual de landing/login e painel em viewports desktop/mobile. Painel visual usou exclusivamente fixture sintética local dos mesmos templates, nunca rota de bypass de autenticação em produção. Larguras 320/390/768/1366 sem overflow horizontal na amostra; login 390×844 sem rolagem. Expansão da evolução diária, tamanho de logo e seleção do mapa verificados. Testes em viewport não substituem aparelhos físicos/leitores de tela.
+- Domínio público reconferido: TLS válido sem bypass, redirecionamento HTTP→HTTPS, quatro páginas GET/HEAD 200 e 12 recursos HTTPS 200. Rotas administrativas redirecionam visitantes anônimos ao login. Contas proprietária e demo permanecem ativas, sem expiração de vínculo e sem redefinição de senha; primeiro acesso/MFA permanecem sob controle do proprietário.
+
+Esta atualização não declara todos os módulos do produto completos; consulte `implementation-status.md`. Recuperação automática por e-mail, histórico analítico durável, alertas/backup externos, revisão independente e homologação funcional ampla continuam pendentes.
