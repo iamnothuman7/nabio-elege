@@ -21,6 +21,14 @@ O antigo usuário demo é renomeado e mantém sua identidade no histórico. Seu 
 
 Rollback de código anterior volta a exigir MFA; os dados e os hashes das novas senhas permanecem. Não restaurar banco nem reexecutar a conversão: ela recusa conta já convertida. Não reativar as credenciais antigas.
 
+### Publicação confirmada do acesso direto — 22/09/2026
+
+- Código em produção: `8651654d7a40d9ba63a093f64fb553cf5b3d5de8`; [CI aprovada](https://github.com/iamnothuman7/nabio-elege/actions/runs/35726955724), incluindo PostgreSQL 14 e 15, segurança e artefato.
+- Suíte de 230 testes; execução SQLite sem falhas, com 23 skips exclusivos de PostgreSQL. Homologação da revisão exata: 105 + 51 + 17 requisições HTTPS, incluindo acesso direto, CSRF, isolamento, MFA padrão preservado para outras contas, revogação de sessões e histórico sintético separado. Rollback de código ensaiado em staging.
+- As duas contas solicitadas tiveram entrada real por HTTPS validada (14 requisições), com chegada direta aos respectivos painéis e logout ao final. Senhas definitivas entregues somente ao proprietário, nunca no Git, relatórios ou arquivos locais.
+- A antiga identidade demo foi renomeada, sem duplicar usuário; vínculo anterior revogado e novo vínculo real ativo. Dados sintéticos preservados na organização anterior; não foram apagados nem copiados à área real. Identificação eleitoral e abrangência continuam a configurar pela equipe.
+- Backups criptografados antes/depois da operação, monitor e worker verificados, homologação desligada ao concluir. TLS 1.3 válido e quatro páginas/12 recursos reconferidos externamente. Nenhuma migration, alteração de Nginx ou mudança em outro projeto.
+
 ## Métricas: o que os números significam
 
 - Dois indicadores separados: páginas da landing servidas publicamente e páginas HTML autenticadas acessadas pelos clientes, incluindo demo; detalhe por organização na página corrente. Períodos de 7 e 30 dias e evolução diária em horário de Brasília.
