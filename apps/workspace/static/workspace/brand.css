@@ -24,7 +24,7 @@
 .brand-logo {
   display: block;
   position: relative;
-  width: 260px;
+  width: 200px;
   max-width: 100%;
   aspect-ratio: 5360 / 980;
   overflow: hidden;
@@ -44,11 +44,11 @@
 .brand-logo--mark { width: 100px; aspect-ratio: 1; clip-path: polygon(0 0, 100% 0, 100% 94%, 90% 94%, 90% 100%, 0 100%); }
 .brand-logo--mark img { width: 750%; left: -40%; top: -150%; }
 .brand, .product-brand { max-width: 100%; }
-.sidebar .brand-logo { width: 218px; }
-.topbar .brand-logo { width: 220px; }
-.auth-story .brand-logo { width: 310px; }
-.public-card .brand-logo { width: 300px; }
-.product-footer .brand-logo { width: 250px; }
+.sidebar .brand-logo { width: 178px; }
+.topbar .brand-logo { width: 178px; }
+.auth-story .brand-logo { width: 240px; }
+.public-card .brand-logo { width: 224px; }
+.product-footer .brand-logo { width: 200px; }
 .brand:hover, .product-brand:hover { text-decoration: none; }
 
 /* The full-color signature always sits on white. */
@@ -146,17 +146,17 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   outline-color: var(--brand-on-dark);
 }
 @media (max-width: 760px) {
-  .auth-story .brand-logo { width: 255px; }
+  .auth-story .brand-logo { width: 190px; }
   .topbar .brand-logo { width: 155px; }
   .shell.no-sidebar .topbar { height: auto; min-height: 80px; padding-top: 12px; padding-bottom: 12px; flex-wrap: wrap; }
   .shell.no-sidebar .account { flex-wrap: wrap; }
 }
 @media (max-width: 480px) {
   .product-header { gap: 15px; }
-  .product-header .brand-logo { width: clamp(165px, 48vw, 230px); }
+  .product-header .brand-logo { width: clamp(140px, 40vw, 175px); }
   .product-header .product-button.compact { gap: 10px; padding: 10px 12px; }
   .scene-core > .brand-logo { width: 84px; }
-  .product-footer .brand-logo { width: 240px; }
+  .product-footer .brand-logo { width: 190px; }
 }
 @media (forced-colors: active) {
   .brand-logo { forced-color-adjust: none; background: #fff; }

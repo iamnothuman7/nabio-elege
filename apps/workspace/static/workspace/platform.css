@@ -20,5 +20,24 @@
 .platform-field label { display:block; margin-bottom:8px; }
 .platform-field input:not([type=checkbox]) { width:100%; }
 .platform-customer-form > p { margin:24px 0; color:var(--brand-muted); }
+.platform-nav { display:flex; flex-wrap:wrap; gap:8px 24px; margin-bottom:28px; border-bottom:1px solid var(--brand-line); }
+.platform-nav a { display:inline-flex; align-items:center; min-height:44px; font-size:12px; }
+.platform-section-heading { display:flex; justify-content:space-between; align-items:center; gap:20px; flex-wrap:wrap; }
+.platform-section-heading h2 { margin-bottom:0; }
+.platform-usage-totals { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin:24px 0 18px; }
+.platform-usage-totals article { display:flex; flex-direction:column; gap:8px; border:1px solid var(--brand-line); padding:22px; border-radius:14px; background:var(--brand-soft); }
+.platform-usage-totals strong { font-size:36px; color:var(--brand-primary); }
+.platform-usage-totals small, .platform-field small { color:var(--brand-muted); font-size:11px; }
+.platform-section .platform-usage-note, .platform-usage-note { color:var(--brand-muted); font-size:11px; line-height:1.7; margin:16px 0; }
+.platform-trend { margin:22px 0; }
+.platform-trend summary { cursor:pointer; min-height:44px; padding:12px 0; color:var(--brand-primary); }
+.platform-trend caption { text-align:left; color:var(--brand-muted); padding:10px 0; font-size:11px; }
+.platform-trend meter { width:clamp(50px, 10vw, 150px); height:12px; margin-right:12px; accent-color:var(--brand-primary); }
+.platform-tenant-usage { display:grid; gap:8px; }
+.platform-tenant-usage article { display:flex; justify-content:space-between; gap:20px; padding:14px 0; border-bottom:1px solid var(--brand-line); }
+.platform-tenant-usage span { overflow-wrap:anywhere; min-width:0; }
+.platform-tenant-usage strong { white-space:nowrap; color:var(--brand-primary); }
+.platform-tenant-usage small { font-weight:400; }
 @media(max-width:900px) { .platform-cards { grid-template-columns:1fr; } .platform-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:560px) { .platform-form-grid { grid-template-columns:1fr; } .platform-audit article { grid-template-columns:1fr; } .platform-audit small { grid-column:1; } .platform-card { padding:16px; } .platform-metrics { gap:10px; } }
+@media(max-width:560px) { .platform-usage-totals { grid-template-columns:1fr; gap:12px; } .platform-section-heading .button-group { width:auto; } }

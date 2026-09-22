@@ -97,6 +97,36 @@ def create_customer(
 
 
 @transaction.atomic
+def create_customer_access(*, actor, campaign, role, username, password):
+    require_platform_admin(actor)
+    campaign = Campaign.objects.select_related("tenant").get(pk=campaign.pk)
+    role = Role.objects.get(pk=role.pk)
+    if campaign.tenant.status != "active" or campaign.phase == "archived":
+        raise ValidationError(
+            "Selecione uma organização ativa e campanha não arquivada."
+        )
+    if role.tenant_id != campaign.tenant_id or role.code == "platform-operator":
+        raise ValidationError("Escolha um papel de cliente da mesma organização.")
+    user = account(username, password)
+    Membership.objects.create(
+        user=user,
+        tenant=campaign.tenant,
+        campaign=campaign,
+        role=role,
+        status="active",
+        invited_by=actor,
+    )
+    platform_audit(
+        actor=actor,
+        action="platform.user_created",
+        resource_type="user",
+        resource_id=user.pk,
+        minimized_diff={"campaign_id": str(campaign.pk), "role_id": str(role.pk)},
+    )
+    return user
+
+
+@transaction.atomic
 def open_campaign(*, actor, campaign):
     require_platform_admin(actor)
     if campaign.tenant.status != "active":

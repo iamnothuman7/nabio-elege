@@ -5,6 +5,8 @@ from . import auth_views, form_views, geo_views, legal_views, marketing_views, p
 urlpatterns = [
     path("plataforma/", platform_views.dashboard, name="platform_dashboard"),
     path("admin/", platform_views.dashboard, name="platform_admin_alias"),
+    path("plataforma/atividade/", platform_views.activity, name="platform_activity"),
+    path("plataforma/usuarios/novo/", platform_views.user_create, name="platform_user_create"),
     path("plataforma/clientes/novo/", platform_views.customer_create, name="platform_customer_create"),
     path("plataforma/campanhas/<uuid:object_id>/abrir/", platform_views.campaign_open, name="platform_campaign_open"),
     path("plataforma/clientes/<uuid:object_id>/status/", platform_views.tenant_status, name="platform_tenant_status"),

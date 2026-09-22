@@ -7,6 +7,7 @@ from django.utils.crypto import salted_hmac
 import time
 
 from .models import SecurityProfile
+from .platform_metrics import record_page_view
 from apps.core.client_address import client_address
 
 
@@ -16,6 +17,7 @@ class AccessSecurityMiddleware:
 
     def __call__(self, request):
         response = self.dispatch(request)
+        record_page_view(request, response)
         return self.secure_response(request, response)
 
     def dispatch(self, request):

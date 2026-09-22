@@ -85,6 +85,34 @@ class InterfaceTests(SimpleTestCase):
             self.assertIn(feature, js)
         self.assertNotIn("fetch(", js)
 
+    def test_brazil_state_highlight_uses_shape_lift_not_rectangular_focus(self):
+        css = Path(finders.find("workspace/brazil-map.css")).read_text(encoding="utf-8")
+        self.assertIn(
+            "#brazil-surfaces .brazil-state:focus-visible { outline: none; box-shadow: none; -webkit-tap-highlight-color: transparent; }",
+            css,
+        )
+        self.assertIn(
+            ".brazil-ready #brazil-surfaces .brazil-state:hover,\n"
+            "#brazil-surfaces .brazil-state.is-selected,\n"
+            "#brazil-surfaces .brazil-state:focus-visible { fill: #b8f1c9; transform: translateY(-8px); filter: drop-shadow(0 8px 0 #07522f); }",
+            css,
+        )
+        self.assertIn(
+            "#brazil-surfaces .brazil-state:focus-visible { stroke: #fff; stroke-width: 3; }",
+            css,
+        )
+        self.assertIn(
+            ".brazil-explorer :focus-visible { outline: 3px solid #d4eddb; outline-offset: 3px; }",
+            css,
+        )
+        self.assertIn(
+            "#brazil-surfaces .brazil-state:focus-visible { transform: none; filter: none; }",
+            css,
+        )
+        js = Path(finders.find("workspace/brazil-map.js")).read_text(encoding="utf-8")
+        self.assertNotIn(".blur(", js)
+        self.assertIn("item.setAttribute('aria-pressed', String(active))", js)
+
 
 class PublicSurfaceTests(TestCase):
     def test_public_pages_support_head_and_keep_security_headers(self):

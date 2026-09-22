@@ -8,12 +8,13 @@ from django.core.management import CommandError, call_command
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from apps.campaigns.models import Campaign, Membership, Tenant
+from apps.campaigns.models import Campaign, Membership, Role, Tenant
 from apps.core.models import AuditEvent
 from apps.core.rls import database_scope
 from .models import FieldWorker, SecurityProfile
 from .platform_services import (
     create_customer,
+    create_customer_access,
     open_campaign,
     set_tenant_status,
     set_user_status,
@@ -179,6 +180,116 @@ class PlatformTests(TestCase):
             self.client.get(reverse("dashboard", args=[self.campaign.pk])),
             "Dados fictícios",
         )
+
+    def test_create_additional_user_scoped_and_audited(self):
+        payload = {
+            "campaign": self.campaign.pk,
+            "role": self.member.role_id,
+            "username": "additional.operator",
+            "password": "Test-only-Additional-189!",
+        }
+        response = self.client.post(reverse("platform_user_create"), payload)
+        self.assertRedirects(response, reverse("platform_dashboard"))
+        user = User.objects.get(username=payload["username"])
+        self.assertFalse(user.is_staff or user.is_superuser)
+        self.assertTrue(user.securityprofile.password_change_required)
+        self.assertEqual(Membership.objects.get(user=user).campaign, self.campaign)
+        with database_scope(actor=self.admin):
+            event = AuditEvent.objects.get(
+                action="platform.user_created", resource_id=str(user.pk)
+            )
+            self.assertNotIn(payload["password"], json.dumps(event.minimized_diff))
+        self.assertEqual(
+            self.client.post(reverse("platform_user_create"), payload).status_code, 200
+        )
+        self.assertEqual(User.objects.filter(username=payload["username"]).count(), 1)
+
+    def test_new_user_rejects_cross_tenant_role_and_platform_role(self):
+        other = Tenant.objects.create(name="Outro", slug="other-role")
+        wrong_role = Role.objects.create(tenant=other, name="Outro papel", code="other")
+        payload = {
+            "campaign": self.campaign.pk,
+            "role": wrong_role.pk,
+            "username": "forbidden.new",
+            "password": "Test-only-Additional-189!",
+        }
+        self.assertEqual(
+            self.client.post(reverse("platform_user_create"), payload).status_code, 200
+        )
+        self.assertFalse(User.objects.filter(username=payload["username"]).exists())
+        platform_role = Role.objects.create(
+            tenant=self.tenant, name="Operador", code="platform-operator"
+        )
+        for role in (wrong_role, platform_role):
+            with self.assertRaises(ValidationError):
+                create_customer_access(
+                    actor=self.admin,
+                    campaign=self.campaign,
+                    role=role,
+                    username="forbidden.service",
+                    password=payload["password"],
+                )
+        self.assertFalse(User.objects.filter(username="forbidden.service").exists())
+
+    def test_new_routes_reject_customer_and_require_csrf(self):
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.admin)
+        self.assertEqual(
+            csrf_client.post(reverse("platform_user_create"), {}).status_code, 403
+        )
+        self.assertEqual(
+            self.client.get(reverse("platform_user_create")).status_code, 200
+        )
+        self.assertEqual(self.client.get(reverse("platform_activity")).status_code, 200)
+        self.customer_login()
+        for name in ("platform_user_create", "platform_activity"):
+            self.assertEqual(self.client.get(reverse(name)).status_code, 403)
+        self.assertEqual(
+            self.client.post(reverse("platform_user_create"), {}).status_code, 403
+        )
+
+    def test_activity_is_filtered_and_does_not_leak_other_admin_events(self):
+        from .platform_services import platform_audit
+
+        other = User.objects.create_superuser(
+            "other.admin", "", "Test-only-Other-Admin-159!"
+        )
+        platform_audit(
+            actor=other,
+            action="platform.private_other_actor",
+            resource_type="user",
+            resource_id=other.pk,
+        )
+        response = self.client.get(
+            reverse("platform_activity"),
+            {"category": "platform", "q": "customer_created"},
+        )
+        self.assertContains(response, "platform.customer_created")
+        self.assertNotContains(response, "platform.private_other_actor")
+        self.assertNotContains(response, self.customer_args["password"])
+
+    def test_direct_campaign_audit_requires_explicit_post(self):
+        response = self.client.post(
+            reverse("platform_campaign_open", args=[self.campaign.pk]),
+            {"destination": "audit"},
+        )
+        self.assertRedirects(response, reverse("audit_log", args=[self.campaign.pk]))
+        response = self.client.post(
+            reverse("platform_campaign_open", args=[self.campaign.pk]),
+            {"destination": "https://invalid.example/"},
+        )
+        self.assertRedirects(response, reverse("dashboard", args=[self.campaign.pk]))
+
+    def test_metrics_visible_only_in_platform_and_fail_gracefully(self):
+        response = self.client.get(reverse("platform_dashboard"), {"days": "30"})
+        self.assertContains(response, "Visualizações da landing page")
+        self.assertEqual(response.context["usage"]["days"], 30)
+        with patch(
+            "apps.workspace.platform_metrics.cache.get_many",
+            side_effect=ConnectionError,
+        ):
+            response = self.client.get(reverse("platform_dashboard"))
+        self.assertContains(response, "Métricas temporariamente indisponíveis")
 
 
 class ProductBootstrapTests(TestCase):

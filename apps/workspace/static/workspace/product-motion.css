@@ -63,7 +63,7 @@ body.page-unfocused *, .scene-offscreen, .scene-offscreen *, .ribbon-offscreen .
   .scene-card { -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); background: linear-gradient(125deg, #ffffffe8, #eaf6eddc); }
   .territory-stack article { -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
 }
-@media (max-width: 1000px) { .product-header .brand-logo { width: 225px; } .product-header nav { gap: 16px; } }
+@media (max-width: 1000px) { .product-header .brand-logo { width: 185px; } .product-header nav { gap: 16px; } }
 @media (max-width: 850px) {
   .product-header { width: calc(100% - 32px); top: 14px; height: 70px; padding: 0 20px; border-radius: 22px; }
   .product-hero { padding-top: 136px; }
@@ -74,7 +74,7 @@ body.page-unfocused *, .scene-offscreen, .scene-offscreen *, .ribbon-offscreen .
 @media (max-width: 480px) {
   html { scroll-padding-top: 100px; }
   .product-header { width: calc(100% - 24px); height: 64px; top: 12px; padding: 0 12px; gap: 10px; border-radius: 20px; }
-  .product-header .brand-logo { width: clamp(165px, 48vw, 220px); }
+  .product-header .brand-logo { width: clamp(140px, 40vw, 175px); }
   .product-header .product-button.compact { padding: 10px; gap: 8px; }
   .product-hero { padding-top: 120px; }
   .product-ribbon { padding: 10px 14px; flex-wrap: nowrap; }

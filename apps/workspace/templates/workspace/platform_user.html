@@ -1,0 +1,5 @@
+{% extends 'workspace/base.html' %}{% load static %}{% block content %}
+<link rel="stylesheet" href="{% static 'workspace/platform.css' %}">
+<section class="page-heading"><div><div class="eyebrow">ADMINISTRAÇÃO DA PLATAFORMA</div><h1>Novo usuário de cliente</h1><p>Crie um login para uma campanha existente, com papel e organização explícitos. Esta ação nunca cria outro superadministrador.</p></div><a class="button secondary" href="{% url 'platform_dashboard' %}">Voltar</a></section>
+<form method="post" class="panel padded platform-customer-form">{% csrf_token %}{{ form.non_field_errors }}<div class="platform-form-grid">{% for field in form %}<div class="platform-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{{ field.errors }}</div>{% endfor %}</div><p>Entregue a senha inicial por um canal seguro. O usuário precisará alterá-la e configurar o autenticador no primeiro acesso. Para alterar papéis ou gerenciar convites, abra “Equipe e acessos” dentro da campanha.</p><button class="button" type="submit">Criar usuário</button></form>
+{% endblock %}

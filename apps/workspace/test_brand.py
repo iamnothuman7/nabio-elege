@@ -10,6 +10,17 @@ from django.test import SimpleTestCase
 
 
 class BrandIdentityTests(SimpleTestCase):
+    def test_logos_use_compact_sizes_without_changing_the_artwork(self):
+        css = Path(finders.find("workspace/brand.css")).read_text(encoding="utf-8")
+        self.assertIn("width: 200px;", css)
+        self.assertIn(".sidebar .brand-logo { width: 178px; }", css)
+        self.assertIn(".public-card .brand-logo { width: 224px; }", css)
+        self.assertIn("aspect-ratio: 5360 / 980", css)
+        motion = Path(finders.find("workspace/product-motion.css")).read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("width: clamp(140px, 40vw, 175px)", motion)
+
     def test_official_favicon_is_packaged_without_modification(self):
         asset = finders.find("workspace/brand/nabio-elege-icon.png")
         self.assertIsNotNone(asset)
