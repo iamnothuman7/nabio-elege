@@ -17,7 +17,7 @@ def operational_map_data(context, territory_id=None):
     permissions = context["permissions"]
     if "territories.read.campaign" not in permissions:
         return {"points": [], "has_field_access": False}
-    bases = CampaignBase.objects.filter(campaign=campaign, status="active", public_location_confirmed=True).select_related("territory")
+    bases = CampaignBase.objects.filter(campaign=campaign, status="active", public_location_confirmed=True, latitude__isnull=False, longitude__isnull=False).select_related("territory")
     if territory_id:
         bases = bases.filter(territory_id=territory_id)
     points = []
@@ -69,6 +69,11 @@ def campaign_map(request, campaign_id):
     data = operational_map_data(context, selected.pk if selected else None)
     context.update(title="Mapa da campanha", active="map", map_enabled=True, map_data=data, territories=territories, selected_territory=selected, points=data["points"])
     context["can_manage_territories"] = "territories.manage.campaign" in context["permissions"] and context["campaign"].phase != "archived"
+    unlocated = CampaignBase.objects.filter(campaign=context["campaign"], status="active", public_location_confirmed=True).filter(Q(latitude__isnull=True) | Q(longitude__isnull=True))
+    if selected:
+        unlocated = unlocated.filter(territory=selected)
+    context["unlocated_count"] = unlocated.count()
+    context["unlocated_bases"] = unlocated.order_by("name")[:50]
     data["geography_url"] = reverse("geography_layer", args=[campaign_id, "catalogo", "BR"]).replace("catalogo/BR/", "")
     data["create_area_url"] = reverse("create_map_area", args=[campaign_id])
     data["national_explorer"] = True
