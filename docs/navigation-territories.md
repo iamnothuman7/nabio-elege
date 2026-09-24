@@ -64,3 +64,25 @@ não se trata de um mapa offline.
 
 Esta revisão não certifica todos os módulos do produto. O status de publicação
 é registrado separadamente após CI, staging e verificações em produção.
+
+## Publicação verificada
+
+Em 24/09/2026 às 17:48 UTC, produção ficou ativa em
+`2de3282a04a3c1473824c41338a828830193c3aa`.
+
+- [CI aprovada](https://github.com/iamnothuman7/nabio-elege/actions/runs/36035878951):
+  SQLite, PostgreSQL 14/15, testes de interação, segurança e artefato.
+- Homologação HTTPS: 105 verificações gerais (44 listas/42 formulários), 51 de
+  plataforma e 17 de acesso direto. Ensaio adicional repetiu os fluxos gerais e
+  confirmou ViaCEP real por CEP/rua, rejeição de CSRF/entrada inválida e três scripts
+  locais do mapa/menu. Contas de QA encerradas; nenhum dado real usado nos ensaios.
+- Retorno à release anterior e reativação da nova ensaiados em homologação, com
+  diretório dos workers verificado; sem reversão de banco.
+- Backups cifrados verificados antes e depois; nenhum backup ou segredo exportado.
+- Produção: banco, RLS, cache, fila, antivírus, workers e versão ativos conferidos.
+  Contas existentes preservadas, sem alteração de senha ou permissão.
+- TLS 1.3 e certificado do domínio válidos; GET/HEAD das quatro páginas públicas,
+  12 recursos e redirecionamento HTTP→HTTPS aprovados. Administração anônima negada.
+- Sem migrations, alteração de Nginx ou reinício do servidor; serviços alheios
+  preservados. Homologação desligada ao final. Evidências detalhadas ficam privadas
+  no servidor, sem dados de clientes no repositório.
