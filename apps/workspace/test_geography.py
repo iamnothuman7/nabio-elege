@@ -64,6 +64,24 @@ class BoundaryValidationTests(SimpleTestCase):
 
 
 class GeographyProviderTests(SimpleTestCase):
+    def test_map_library_is_local_and_matches_official_distribution(self):
+        import base64
+        import hashlib
+        from pathlib import Path
+        from django.contrib.staticfiles import finders
+        from django.template.loader import render_to_string
+
+        html = render_to_string("workspace/map_assets.html")
+        self.assertNotIn("https://unpkg.com", html)
+        for name, expected in {
+            "leaflet.js": "20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=",
+            "leaflet.css": "p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=",
+        }.items():
+            body = Path(finders.find("workspace/vendor/leaflet/" + name)).read_bytes()
+            self.assertEqual(
+                base64.b64encode(hashlib.sha256(body).digest()).decode(), expected
+            )
+
     def setUp(self):
         cache.clear()
 
@@ -296,3 +314,5 @@ class MapAreaTests(TestCase):
         self.assertContains(response, "Área sintética")
         self.assertNotContains(response, "Other campaign hidden")
         self.assertContains(response, "geo-region")
+        self.assertNotIn("unpkg.com", response["Content-Security-Policy"])
+        self.assertIn("script-src 'self';", response["Content-Security-Policy"])

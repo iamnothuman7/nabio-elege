@@ -1,0 +1,16 @@
+{% load static %}
+<link rel="stylesheet" href="{% static 'workspace/address-lookup.css' %}">
+<script src="{% static 'workspace/address-lookup.js' %}" defer></script>
+<section class="address-lookup" data-address-lookup="{% url 'address_lookup' campaign.id %}" data-map-url="{% url 'campaign_map' campaign.id %}">
+  <h2>Localize o território</h2>
+  <p>Informe um CEP para preencher município, UF e, quando disponível, o nome do bairro. Depois confira os campos.</p>
+  <div class="address-cep-row"><label for="lookup-cep">CEP de referência<input id="lookup-cep" inputmode="numeric" autocomplete="postal-code" placeholder="00000-000" maxlength="9" aria-describedby="address-privacy"></label><button type="button" class="button secondary" id="lookup-cep-button">Consultar CEP</button></div>
+  <details class="address-search"><summary>Não sei o CEP · buscar pela rua</summary>
+    <div class="form-grid"><label>UF<select id="lookup-state"><option value="">Selecione</option>{% for value, label in form.state.field.choices %}{% if value %}<option value="{{ value }}">{{ label }}</option>{% endif %}{% endfor %}</select></label><label>Cidade<input id="lookup-city" maxlength="100" placeholder="Ex.: Fortaleza" autocomplete="off"></label><label class="full">Nome da rua, sem número<input id="lookup-street" maxlength="100" placeholder="Ex.: Avenida Santos Dumont" autocomplete="off"></label></div>
+    <button type="button" class="button secondary" id="lookup-address-button">Buscar endereço</button>
+  </details>
+  <p id="address-status" role="status" aria-live="polite"></p>
+  <div id="address-results" class="address-results"></div>
+  <a id="address-map-link" class="back-link" target="_blank" rel="noopener" title="Abre o mapa em outra aba, preservando este formulário" hidden>Ver município no mapa ↗</a>
+  <small id="address-privacy">Consulta externa: ViaCEP. Enviamos somente CEP ou UF, cidade e rua, sem dados de pessoas ou da campanha. Não informe número residencial. CEP não define o contorno de bairro ou comunidade.</small>
+</section>

@@ -5,7 +5,7 @@ from apps.campaigns.models import Membership
 from apps.campaigns.services import has_campaign_permission
 from apps.core.models import CampaignScopedModel, Document, RetentionPolicy
 from .registry import LABELS
-from .models import ElectorRegistration
+from .models import ElectorRegistration, Territory
 
 
 class ScopedModelForm(forms.ModelForm):
@@ -46,6 +46,16 @@ class ScopedModelForm(forms.ModelForm):
                 field.help_text = "Informe centavos inteiros. Ex.: 15000 = R$ 150,00."
             if name == "allowed_fields":
                 field.help_text = 'Exemplo: ["name", "email", "message", "adult_declaration", "consent"]'
+        if self._meta.model is Territory:
+            from .address_lookup import UF_CODES
+            self.fields["state"] = forms.ChoiceField(label="Estado / UF", choices=[("", "Selecione o estado")] + [(uf, uf) for uf in sorted(UF_CODES)])
+            self.fields["name"].label = "Nome do território"
+            self.fields["name"].help_text = "Ex.: Bairro Centro, Comunidade Lagoa ou Região Norte. Não é necessário desenhar no mapa."
+            self.fields["area_kind"].label = "Tipo de território"
+            self.fields["municipality"].label = "Município"
+            self.fields["ibge_code"].help_text = "Preenchido pela consulta de CEP, quando disponível. Opcional."
+            self.fields["source_reference"].help_text = "Necessária apenas se houver um contorno desenhado no mapa."
+            self.fields["public_area_confirmed"].help_text = "Confirmação para contornos públicos. Não marque para identificar residências."
         if self._meta.model is ElectorRegistration and self.instance._state.adding:
             self.fields["registration_name"] = forms.CharField(label="Nome informado pela pessoa", min_length=2, max_length=150)
             self.fields["registration_email"] = forms.EmailField(label="E-mail informado (opcional)", max_length=254, required=False)

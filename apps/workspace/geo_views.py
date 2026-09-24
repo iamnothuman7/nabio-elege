@@ -21,6 +21,62 @@ from .views import campaign_context
 
 
 @login_required
+@require_POST
+def address_lookup(request, campaign_id):
+    from django.core.cache import cache
+    from .address_lookup import AddressUnavailable, lookup_address, query_path
+
+    context = campaign_context(request, campaign_id)
+    require_campaign_permission(
+        request.user, context["campaign"], "territories.manage.campaign"
+    )
+    if len(request.body) > 2048:
+        return JsonResponse({"detail": "Consulta muito longa."}, status=400)
+    try:
+        payload = json.loads(request.body)
+        query_path(payload)
+    except (ValueError, TypeError):
+        return JsonResponse(
+            {
+                "detail": "Informe um CEP de 8 dígitos ou UF, cidade e rua (ao menos 3 letras)."
+            },
+            status=400,
+        )
+    try:
+        minute = int(timezone.now().timestamp()) // 60
+        for key, limit in (
+            (f"postal-user:{request.user.pk}:{minute}", 20),
+            (f"postal-global:{minute}", 120),
+        ):
+            cache.add(key, 0, timeout=90)
+            if cache.incr(key) > limit:
+                response = JsonResponse(
+                    {
+                        "detail": "Muitas consultas. Aguarde um minuto ou preencha manualmente."
+                    },
+                    status=429,
+                )
+                response["Retry-After"] = "60"
+                return response
+        return JsonResponse(lookup_address(payload))
+    except AddressUnavailable:
+        return JsonResponse(
+            {
+                "detail": "Consulta indisponível no momento. Você pode preencher os campos manualmente."
+            },
+            status=503,
+        )
+    except Exception:
+        # Cache/connection errors must not reveal search terms, credentials or traces.
+        return JsonResponse(
+            {
+                "detail": "Consulta indisponível no momento. Preencha manualmente ou tente novamente."
+            },
+            status=503,
+        )
+
+
+@login_required
 @require_GET
 def geography_layer(request, campaign_id, kind, code):
     context = campaign_context(request, campaign_id)

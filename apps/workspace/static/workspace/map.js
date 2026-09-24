@@ -43,7 +43,7 @@
     circle.addTo(layers[point.type]);
     markers.set(point.id, circle);
   });
-  L.control.layers(null, Object.fromEntries(Object.entries(layers).map(([key, layer]) => [labels[key], layer])), {collapsed: false}).addTo(map);
+  if (data.points.length) L.control.layers(null, Object.fromEntries(Object.entries(layers).map(([key, layer]) => [labels[key], layer])), {collapsed: true}).addTo(map);
   const fit = () => {
     if (data.points.length) map.fitBounds(data.points.map(p => [p.latitude, p.longitude]), {padding: [40, 40], maxZoom: 13});
   };

@@ -24,6 +24,7 @@ urlpatterns = [
     path("c/<uuid:campaign_id>/mapa/", political_views.campaign_map, name="campaign_map"),
     path("c/<uuid:campaign_id>/geografia/<slug:kind>/<str:code>/", geo_views.geography_layer, name="geography_layer"),
     path("c/<uuid:campaign_id>/mapa/areas/", geo_views.create_map_area, name="create_map_area"),
+    path("c/<uuid:campaign_id>/localizacao/consulta/", geo_views.address_lookup, name="address_lookup"),
     path("c/<uuid:campaign_id>/operacao/", views.dashboard, name="operations_dashboard"),
     path("c/<uuid:campaign_id>/equipe/", views.team, name="team"),
     path("c/<uuid:campaign_id>/juridico/<uuid:object_id>/acessos/", legal_views.case_access, name="case_access"),

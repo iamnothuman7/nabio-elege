@@ -9,6 +9,19 @@ window.NabioGeography = {init(map, data) {
   let states = [], cities = [], brazil, boundaries, controller, generation = 0, places = [];
   let drawing = false, vertices = [], draft, commandId = '';
   const areaForm = byId('geo-area-form');
+  const initial = new URLSearchParams(location.search);
+  let initialCity = initial.get('municipio') || '';
+  function selection(uf, municipality) {
+    const register = byId('geo-register');
+    if (register) {
+      register.hidden = !municipality;
+      if (municipality) register.href = `${register.dataset.createUrl}?${new URLSearchParams({uf:uf.uf,municipio:municipality.name,ibge:municipality.id})}`;
+    }
+    const draw = byId('geo-draw');
+    if (draw) draw.disabled = !municipality;
+    byId('geo-step').textContent = municipality ? `${municipality.name}/${uf.uf} selecionado. O mapa mostra a cidade; use “Cadastrar território” para registrar sua área de atuação.` : uf ? `${uf.name} selecionado. Agora escolha o município.` : 'Escolha o estado para carregar os municípios.';
+    byId('geo-back').disabled = !uf && !region.value;
+  }
   const normalize = value => value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   const options = (element, values, placeholder) => {
     element.replaceChildren(new Option(placeholder, ''));
@@ -53,17 +66,23 @@ window.NabioGeography = {init(map, data) {
   }
   async function refresh() {
     controller?.abort(); controller=new AbortController(); const signal=controller.signal, revision=++generation;
+    if(boundaries){map.removeLayer(boundaries);boundaries=null;}
     status.textContent='Carregando referências geográficas do IBGE…';
     try {
       if(!states.length) {
-        [states,brazil]=await Promise.all([get('catalogo','BR',signal),get('limites','BR',signal)]);
+        const catalog = await get('catalogo','BR',signal); if(revision!==generation)return;
+        states = catalog;
         options(region,[...new Map(states.map(s=>[s.region_id,{id:s.region_id,name:s.region}])).values()].sort((a,b)=>a.id.localeCompare(b.id)),'Todo o Brasil');
         options(state,states,'Todos os estados');
+        const requested = states.find(item=>item.id===initial.get('uf'));
+        if(requested){state.value=requested.id;region.value=requested.region_id;}
       }
       if(revision!==generation)return;
       const uf=states.find(s=>s.id===state.value);
       if(!uf) {
+        selection(null,null);
         cities=[]; city.dataset.state=''; options(city,[],'Selecione um estado'); city.disabled=true;
+        if(!brazil){const result=await get('limites','BR',signal);if(revision!==generation)return;brazil=result;}
         const visible=region.value ? states.filter(s=>s.region_id===region.value) : states;
         const ids=new Set(visible.map(s=>s.id));
         paint({...brazil,features:brazil.features.filter(f=>ids.has(f.properties.codarea))},'state',states);
@@ -74,23 +93,28 @@ window.NabioGeography = {init(map, data) {
         byId('geo-districts').textContent='Selecione um município para consultar. Distrito não equivale a bairro ou comunidade.';
       } else {
         if(city.dataset.state!==uf.id) {
-          cities=await get('municipios',uf.id,signal); if(revision!==generation)return;
-          options(city,cities,'Todos os municípios');city.dataset.state=uf.id;city.disabled=false;
+          selection(uf,null);city.disabled=true;options(city,[],'Carregando municípios…');
+          const result=await get('municipios',uf.id,signal); if(revision!==generation)return;
+          cities=result;
+          options(city,cities,'Selecione o município');city.dataset.state=uf.id;city.disabled=false;
+          if(initialCity && cities.some(item=>item.id===initialCity))city.value=initialCity;
+          initialCity='';
         }
         const municipality=cities.find(c=>c.id===city.value);
-        const geo=await get('limites',municipality?.id||uf.id,signal);if(revision!==generation)return;
-        paint(geo,municipality ? 'city' : 'municipality',municipality ? [municipality] : cities);
+        selection(uf,municipality);
         showPlaces(cities,'municipality');
         byId('geo-selection-title').textContent=municipality?.name||uf.name;
-        byId('geo-selection-count').textContent=municipality ? `IBGE ${municipality.id}` : `${cities.length} municípios`;
+        byId('geo-selection-count').textContent=municipality ? 'Município selecionado' : `${cities.length} municípios`;
         byId('geo-breadcrumb').textContent=`Brasil / ${uf.region} / ${uf.name}${municipality ? ' / '+municipality.name : ''}`;
         if(municipality) {
           byId('geo-districts').textContent='Consultando distritos…';
           get('distritos',municipality.id,signal).then(districts=>{if(revision===generation)byId('geo-districts').textContent=districts.length ? districts.map(d=>d.name).join(' · ')+' — Distritos oficiais; bairros e comunidades são cadastrados separadamente.' : 'Nenhum distrito retornado pela fonte.';}).catch(error=>{if(error.name!=='AbortError' && revision===generation)byId('geo-districts').textContent='Distritos indisponíveis. Tente atualizar a camada.';});
         } else byId('geo-districts').textContent='Selecione um município para consultar seus distritos.';
+        const geo=await get('limites',municipality?.id||uf.id,signal);if(revision!==generation)return;
+        paint(geo,municipality ? 'city' : 'municipality',municipality ? [municipality] : cities);
       }
-      status.textContent='Referência: IBGE · limites simplificados. Clique nas áreas ou use a lista para navegar.';
-    } catch(error) {if(error.name!=='AbortError' && revision===generation)status.textContent=error.message || 'A fonte está indisponível. Use Atualizar camada para tentar novamente.';}
+      status.textContent=city.value ? 'Município aproximado no mapa. Nenhum cadastro foi criado.' : 'Clique em uma área do mapa ou use Estado e Município acima.';
+    } catch(error) {if(error.name!=='AbortError' && revision===generation)status.textContent='A referência geográfica não carregou. Você pode continuar pelo seletor; em Mais opções do mapa, tente carregar novamente.';}
   }
   region.addEventListener('change',()=>{state.value='';city.value='';city.dataset.state='';search.value='';refresh();});
   state.addEventListener('change',()=>{city.value='';search.value='';const uf=states.find(s=>s.id===state.value);if(uf)region.value=uf.region_id;refresh();});

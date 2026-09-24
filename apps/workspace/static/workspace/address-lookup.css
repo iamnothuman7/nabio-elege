@@ -1,0 +1,18 @@
+.address-lookup { padding: 22px; margin-bottom: 24px; background: var(--brand-soft); border: 1px solid var(--brand-line); border-radius: 14px; }
+.address-lookup h2 { margin-bottom: 8px; }
+.address-lookup p, .address-lookup small { font-size: 12px; color: var(--muted); }
+.address-lookup small { display: block; line-height: 1.7; }
+.address-cep-row { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 12px; }
+.address-cep-row label { flex: 1; min-width: 150px; margin: 0; }
+.address-cep-row button { min-height: 43px; }
+.address-search { margin: 18px 0; }
+.address-search summary, .territory-advanced summary { cursor: pointer; font-size: 13px; font-weight: 600; }
+.address-search .form-grid { margin: 16px 0; gap: 12px; }
+.address-results { display: grid; gap: 8px; max-height: 280px; overflow-y: auto; margin: 12px 0; }
+.address-result { text-align: left; border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: white; color: var(--ink); }
+.address-result small { display: block; }
+.address-lookup [hidden] { display: none; }
+#address-status:empty { display: none; }
+#address-status:not(:empty) { margin: 14px 0 0; }
+.territory-advanced { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 18px; }
+.territory-advanced .form-grid { margin-top: 18px; }

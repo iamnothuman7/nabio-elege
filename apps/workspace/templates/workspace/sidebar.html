@@ -1,0 +1,30 @@
+{% load static workspace_tags %}
+<aside class="sidebar" id="sidebar" data-sidebar-scope="{{ campaign.id }}:{{ user.pk }}">
+  <a class="brand sidebar-brand" href="{% url 'dashboard' campaign.id %}" aria-label="Nabio Elege · Central eleitoral" title="Central eleitoral">
+    <img class="sidebar-mark" src="{% static 'workspace/brand/nabio-elege-icon.png' %}" alt="" width="34" height="34" aria-hidden="true">
+    <span class="sidebar-wordmark">{% include 'workspace/brand_logo.html' with white=True decorative=True %}</span>
+  </a>
+  <div class="workspace-label sidebar-label">ÁREA DE TRABALHO</div>
+  <a class="campaign-switch" href="{% url 'home' %}" title="{{ campaign.name }}" aria-label="Campanha: {{ campaign.name }}">
+    <span class="campaign-avatar" aria-hidden="true">{{ campaign.name|first }}</span>
+    <span class="sidebar-label campaign-name">{{ campaign.name }}<small>{{ campaign.get_phase_display }}</small></span>
+    <span class="sidebar-label" aria-hidden="true">⌄</span>
+  </a>
+  <nav aria-label="Menu principal" class="sidebar-nav">
+    <a class="nav-main {% if active == 'dashboard' %}selected{% endif %}" {% if active == 'dashboard' %}aria-current="page"{% endif %} href="{% url 'dashboard' campaign.id %}" title="Central eleitoral" aria-label="Central eleitoral">{% nav_icon 'dashboard' %}<span class="sidebar-label">Central eleitoral</span></a>
+    {% if map_access %}<a class="nav-main {% if active == 'map' %}selected{% endif %}" {% if active == 'map' %}aria-current="page"{% endif %} href="{% url 'campaign_map' campaign.id %}" title="Mapa da campanha" aria-label="Mapa da campanha">{% nav_icon 'map' %}<span class="sidebar-label">Mapa da campanha</span></a>{% endif %}
+    {% for group in navigation %}
+      <details class="nav-group" data-nav-group="{{ group.name|slugify }}" {% if group|group_active:active or group.name == 'Campanha eleitoral' %}open{% endif %}>
+        <summary title="{{ group.name }}" aria-label="{{ group.name }}">{% nav_icon group.name|slugify %}<span class="sidebar-label">{{ group.name }}</span></summary>
+        {% for module in group.modules %}
+          <a class="nav-module {% if active == module.key %}selected{% endif %}" {% if active == module.key %}aria-current="page"{% endif %} href="{% url 'module_list' campaign.id module.key %}" title="{{ module.title }}" aria-label="{{ module.title }}">{% nav_icon module.key %}<span class="sidebar-label">{{ module.title }}</span></a>
+        {% endfor %}
+      </details>
+    {% endfor %}
+    <div class="nav-divider"></div>
+    {% if team_access %}<a class="nav-main {% if active == 'team' %}selected{% endif %}" {% if active == 'team' %}aria-current="page"{% endif %} href="{% url 'team' campaign.id %}" title="Equipe e acessos" aria-label="Equipe e acessos">{% nav_icon 'team' %}<span class="sidebar-label">Equipe e acessos</span></a>{% endif %}
+    {% if report_access %}<a class="nav-main {% if active == 'reports' %}selected{% endif %}" {% if active == 'reports' %}aria-current="page"{% endif %} href="{% url 'reports' campaign.id %}" title="Relatórios" aria-label="Relatórios">{% nav_icon 'reports' %}<span class="sidebar-label">Relatórios</span></a>{% endif %}
+    {% if audit_access %}<a class="nav-main {% if active == 'audit' %}selected{% endif %}" {% if active == 'audit' %}aria-current="page"{% endif %} href="{% url 'audit_log' campaign.id %}" title="Auditoria" aria-label="Auditoria">{% nav_icon 'audit' %}<span class="sidebar-label">Auditoria</span></a>{% endif %}
+  </nav>
+  <div class="sidebar-footer" title="Organização: {{ campaign.tenant.name }}"><span class="status-dot" aria-hidden="true"></span><div class="sidebar-label">Ambiente {% if local_demo or campaign.is_demo %}de demonstração{% else %}administrativo{% endif %}<small>Organização · {{ campaign.tenant.name }}</small></div></div>
+</aside>

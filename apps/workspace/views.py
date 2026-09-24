@@ -171,6 +171,12 @@ def module_edit(request, campaign_id, key, object_id=None):
         return redirect("module_detail", campaign_id=campaign_id, key=key, object_id=instance.pk)
     form_cls = model_form_class(config)
     form = form_cls(request.POST if request.method == "POST" else None, instance=instance, campaign=context["campaign"], actor=request.user)
+    if key == "territorios" and request.method == "GET" and not instance:
+        from .address_lookup import UF_CODES
+        uf, code = request.GET.get("uf", ""), request.GET.get("ibge", "")
+        city = request.GET.get("municipio", "").strip()
+        if uf in UF_CODES and len(code) == 7 and code.isascii() and code.isdigit() and code.startswith(UF_CODES[uf]) and 1 <= len(city) <= 120:
+            form.initial.update(state=uf, municipality=city, ibge_code=code)
     if request.method == "POST":
         try:
             with transaction.atomic():

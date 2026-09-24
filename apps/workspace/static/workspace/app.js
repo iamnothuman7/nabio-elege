@@ -3,11 +3,20 @@ const toggle = document.querySelector('.menu-toggle');
 const mobileQuery = window.matchMedia('(max-width:760px)');
 function setMenu(open) {
   toggle?.setAttribute('aria-expanded', String(open));
+  toggle?.setAttribute('aria-label', open ? 'Fechar menu' : 'Abrir menu');
   sidebar?.classList.toggle('mobile-open', open);
   if (sidebar) sidebar.inert = mobileQuery.matches && !open;
 }
 toggle?.addEventListener('click', () => setMenu(toggle.getAttribute('aria-expanded') !== 'true'));
-document.addEventListener('keydown', event => { if (event.key === 'Escape') { setMenu(false); toggle?.focus(); } });
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Escape') return;
+  if (mobileQuery.matches && sidebar?.classList.contains('mobile-open')) {
+    setMenu(false);
+    toggle?.focus();
+  } else if (sidebar?.contains(document.activeElement)) {
+    document.getElementById('main')?.focus({ preventScroll: true });
+  }
+});
 document.addEventListener('click', event => {
   if (mobileQuery.matches && sidebar?.classList.contains('mobile-open') && !sidebar.contains(event.target) && !toggle?.contains(event.target)) setMenu(false);
 });

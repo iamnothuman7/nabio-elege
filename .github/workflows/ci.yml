@@ -58,6 +58,7 @@ jobs:
       - run: python manage.py makemigrations --check --dry-run --settings=nabio_elege.${{ matrix.settings }}
       - run: python manage.py test --settings=nabio_elege.${{ matrix.settings }}
       - run: python manage.py check_templates --settings=nabio_elege.${{ matrix.settings }}
+      - run: node --test infra/ui_interactions.test.cjs
       - run: python manage.py collectstatic --noinput --settings=nabio_elege.${{ matrix.settings }}
 
   security:
