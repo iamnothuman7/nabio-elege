@@ -1,0 +1,164 @@
+/* Official artwork is unchanged. The two greens are sampled from its opaque pixels. */
+:root {
+  --brand-primary: #117444;
+  --brand-accent: #42b04a;
+  --brand-deep: #073f26;
+  --brand-hover: #0c5933;
+  --brand-soft: #eaf6ed;
+  --brand-line: #d3e6d8;
+  --brand-muted: #526d5e;
+  --brand-on-dark: #d4eddb;
+  --ink: #173d29;
+  --muted: var(--brand-muted);
+  --green: var(--brand-primary);
+  --green-dark: var(--brand-deep);
+  --sidebar: var(--brand-deep);
+  --accent: var(--brand-soft);
+  --bg: #f5f9f6;
+  --line: var(--brand-line);
+}
+
+/* Display viewport trims only transparent margins of the 6000 × 3375 source.
+   Visible artwork fits inside x=320, y=1200, width=5360, height=980.
+   Keep these dimensions paired; never stretch/recreate the lettering. */
+.brand-logo {
+  display: block;
+  position: relative;
+  width: 200px;
+  max-width: 100%;
+  aspect-ratio: 5360 / 980;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+.brand-logo img {
+  position: absolute;
+  display: block;
+  width: 111.940299%;
+  max-width: none;
+  height: auto;
+  left: -5.970149%;
+  top: -122.44898%;
+}
+/* Transparent pixels remain transparent; both ink colors become pure white. */
+.brand-logo--white img { filter: brightness(0) invert(1); }
+.brand-logo--mark { width: 100px; aspect-ratio: 1; clip-path: polygon(0 0, 100% 0, 100% 94%, 90% 94%, 90% 100%, 0 100%); }
+.brand-logo--mark img { width: 750%; left: -40%; top: -150%; }
+.brand, .product-brand { max-width: 100%; }
+.sidebar .brand-logo { width: 178px; }
+.topbar .brand-logo { width: 178px; }
+.auth-story .brand-logo { width: 240px; }
+.public-card .brand-logo { width: 224px; }
+.product-footer .brand-logo { width: 200px; }
+.brand:hover, .product-brand:hover { text-decoration: none; }
+
+/* The full-color signature always sits on white. */
+.product-header { background: #fff; color: var(--brand-deep); border-color: var(--brand-line); }
+.product-header nav, .product-header nav a:hover { color: var(--brand-primary); }
+.product-header .product-button.outline {
+  background: #fff;
+  color: var(--brand-primary);
+  border-color: var(--brand-primary);
+}
+.product-header .product-button.outline:hover { background: var(--brand-soft); }
+body.product-page, .auth-body, .auth-content { background: #fff; }
+body.product-page { color: var(--ink); }
+.product-hero {
+  background: radial-gradient(ellipse at 75% 45%, #42b04a38, transparent 60%), var(--brand-deep);
+  color: #fff;
+}
+.product-territory, .product-cta, .product-footer { background: var(--brand-deep); color: #fff; }
+.product-button { background: var(--brand-accent); border-color: var(--brand-accent); color: #052e1b; }
+.product-button:hover { background: #66c86c; border-color: #66c86c; color: #052e1b; }
+.product-hero h1 em, .product-cta h2 em { color: #a6e7ad; }
+.product-kicker, .product-hero-copy > p, .product-text-link, .product-stage,
+.hero-bottom, .scene-caption, .product-territory p, .section-number.light,
+.territory-stack small, .territory-stack article > span, .product-cta p,
+.product-footer p, .product-footer > div { color: var(--brand-on-dark); }
+.status-dot, .mini-map i, .scene-work i { background: var(--brand-accent); }
+.product-ribbon { background: var(--brand-soft); color: var(--brand-primary); }
+.product-ribbon i { color: var(--brand-accent); }
+.product-section h2 em, .product-text-link.dark { color: var(--brand-primary); }
+.section-number, .section-intro > p, .feature-tag, .feature-panel p, .feature-panel li,
+.feature-visual > small, .principle-grid p, .principle-grid article > span,
+.product-faq p, .product-tabs button { color: var(--brand-muted); }
+.product-tabs, .product-faq details, .principle-grid article { border-color: var(--brand-line); }
+.product-tabs button[aria-selected=true] { background: var(--brand-primary); color: #fff; }
+.product-tabs button:hover { border-color: var(--brand-primary); }
+.feature-panel { background: #f5faf6; border-color: var(--brand-line); }
+.feature-visual { background: radial-gradient(ellipse, #42b04a18, transparent 65%); }
+.scene-core {
+  background: linear-gradient(140deg, #42b04a, #117444);
+  box-shadow: inset -10px -10px 0 #073f2633, inset 1px 2px 0 #9feba6, 18px 27px 0 #0c5933, 25px 47px 45px #00190d77;
+  color: #fff;
+}
+.scene-core > .brand-logo { width: 100px; margin: 0; }
+.scene-core small { color: #fff; }
+.scene-card { background: linear-gradient(125deg, #fffffffa, #eaf6edfa); color: var(--brand-deep); }
+.scene-eyebrow, .scene-team small { color: var(--brand-muted); }
+.scene-avatars b { background: var(--brand-primary); border-color: var(--brand-soft); }
+.scene-avatars > span, .scene-work p span, .plate-front b, .operation-visual b,
+.operation-visual i, .security-ring { color: var(--brand-primary); }
+.plate-back { background: #b5ddbf; }
+.plate-middle { background: #d1ecd7; }
+.plate-front { background: #eaf6ed; }
+.layer-plate { border-color: var(--brand-primary); box-shadow: 15px 15px 18px #11744426; }
+.team-visual > div, .operation-visual > div { background: #fff; border-color: var(--brand-line); box-shadow: 8px 10px 0 #d1ecd7; }
+.team-visual span { color: var(--brand-muted); }
+.security-ring { border-color: var(--brand-primary); box-shadow: 0 0 0 20px #42b04a18, 0 0 0 40px #42b04a0d; }
+.territory-stack article { background: #42b04a0f; border-color: #42b04a66; }
+.territory-stack article:hover { background: #42b04a26; }
+
+.auth-story { background: radial-gradient(ellipse at 35% 70%, #42b04a35, transparent 60%), var(--brand-deep); color: #fff; }
+.auth-story h1 em { color: #a6e7ad; }
+.auth-story p, .auth-story .eyebrow, .auth-story .story-lines, .auth-story > small { color: var(--brand-on-dark); }
+.auth-story .story-lines { border-color: #42b04a66; }
+.auth-art-layer { border-color: #42b04a99; background: #42b04a26; }
+.auth-art-layer:nth-child(2) { background: #42b04a33; }
+.auth-art-layer:nth-child(3) { background: #117444; border-color: #42b04a; }
+.auth-art-layer .brand-logo--mark { width: 76px; }
+.password-toggle, .auth-form-row a { color: var(--brand-primary); }
+.auth-session-note, .auth-back-link, .auth-help { color: var(--brand-muted); }
+input::placeholder, textarea::placeholder { color: var(--brand-muted); opacity: 1; }
+.auth-security-caption { background: var(--brand-soft); border-color: var(--brand-line); color: var(--brand-muted); }
+.auth-security-caption > span { color: var(--brand-primary); }
+.auth-card .auth-bottom { border-color: var(--brand-line); }
+.button:hover { background: var(--brand-hover); }
+.button.secondary:hover { background: var(--brand-soft); }
+.sidebar nav a.selected { background: var(--brand-accent); color: #052e1b; }
+.sidebar nav a:hover { background: var(--brand-primary); color: #fff; }
+.sidebar nav a.selected:hover { background: #66c86c; color: #052e1b; }
+.sidebar-close { color: #fff; }
+.campaign-avatar { background: var(--brand-primary); color: #fff; }
+.accent-panel, .electoral-shortcuts > a, .round-link, .worker-avatar { background: var(--brand-soft); border-color: var(--brand-line); }
+.electoral-shortcuts > a:hover { background: #d1ecd7; }
+.candidate-hero { background: radial-gradient(ellipse at 95% 5%, #42b04a40, transparent 60%), var(--brand-deep); }
+.candidate-monogram { background: var(--brand-soft); color: var(--brand-primary); border-color: var(--brand-accent); }
+.hero-overline, .candidate-copy p, .candidate-tags span, .election-countdown > span,
+.election-countdown a { color: var(--brand-on-dark); }
+.brand:focus-visible, .product-page :focus-visible, .auth-card :focus-visible,
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid var(--brand-primary);
+  outline-offset: 4px;
+}
+.product-hero :focus-visible, .product-territory :focus-visible,
+.product-cta :focus-visible, .product-footer :focus-visible,
+.auth-story :focus-visible, .sidebar :focus-visible, .candidate-hero :focus-visible {
+  outline-color: var(--brand-on-dark);
+}
+@media (max-width: 760px) {
+  .auth-story .brand-logo { width: 190px; }
+  .topbar .brand-logo { width: 155px; }
+  .shell.no-sidebar .topbar { height: auto; min-height: 80px; padding-top: 12px; padding-bottom: 12px; flex-wrap: wrap; }
+  .shell.no-sidebar .account { flex-wrap: wrap; }
+}
+@media (max-width: 480px) {
+  .product-header { gap: 15px; }
+  .product-header .brand-logo { width: clamp(140px, 40vw, 175px); }
+  .product-header .product-button.compact { gap: 10px; padding: 10px 12px; }
+  .scene-core > .brand-logo { width: 84px; }
+  .product-footer .brand-logo { width: 190px; }
+}
+@media (forced-colors: active) {
+  .brand-logo { forced-color-adjust: none; background: #fff; }
+  .brand-logo--white img { filter: none; }
+}

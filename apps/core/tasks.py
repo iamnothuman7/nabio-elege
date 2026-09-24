@@ -5,14 +5,27 @@ from django.utils import timezone
 
 from .models import OutboxEvent
 from .outbox import EVENT_TASKS, dispatch_outbox_event
+from .rls import current_scope, database_scope
+from apps.campaigns.models import Campaign
 
 
 @shared_task(name="core.dispatch_outbox")
 def dispatch_outbox(limit=100):
+    dispatched = 0
+    for campaign in Campaign.objects.order_by("pk").iterator():
+        with database_scope(campaign=campaign):
+            dispatched += dispatch_campaign_outbox(limit=max(0, limit - dispatched))
+        if dispatched >= limit:
+            break
+    return dispatched
+
+
+def dispatch_campaign_outbox(limit=100):
     event_ids = list(
         OutboxEvent.objects.filter(
             Q(status=OutboxEvent.Status.PENDING) | Q(status=OutboxEvent.Status.PROCESSING, updated_at__lt=timezone.now() - timedelta(minutes=5)),
             available_at__lte=timezone.now(),
+            campaign_id=current_scope().campaign_id,
             kind__in=EVENT_TASKS,
         )
         .order_by("available_at")

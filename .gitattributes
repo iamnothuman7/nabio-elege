@@ -1,0 +1,2 @@
+# Keep third-party distribution bytes intact, including original whitespace.
+apps/workspace/static/workspace/vendor/leaflet/** -text -whitespace

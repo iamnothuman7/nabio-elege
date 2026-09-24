@@ -200,9 +200,10 @@ def campaign_detail(request, campaign_id: UUID):
     tags=["audit"],
 )
 def list_audit_events(request, campaign_id: UUID):
+    from apps.workspace.legal_access import visible_audit_events
     campaign = get_authorized_campaign(request, campaign_id)
     require_campaign_permission(request.user, campaign, "audit.read.campaign")
-    return AuditEvent.objects.filter(campaign=campaign)[:100]
+    return visible_audit_events(request.user, campaign)[:100]
 
 
 @api.post(

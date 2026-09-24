@@ -1,1 +1,20 @@
-{% extends 'workspace/auth_base.html' %}{% block content %}<div class="auth-card"><div class="eyebrow">SEGURANÇA DA CONTA</div><h2>{% if enabled %}Confirme seu segundo fator{% else %}Ative a autenticação em duas etapas{% endif %}</h2>{% if error %}<div class="notice error">{{ error }}</div>{% endif %}{% if codes %}<div class="notice success">Autenticação em dois fatores ativada. Guarde estes códigos de recuperação em local seguro; cada código funciona uma vez.</div><div class="recovery-codes">{% for code in codes %}<code>{{ code }}</code>{% endfor %}</div><a href="{% url 'home' %}" class="button">Continuar</a>{% else %}{% if secret %}<p>Adicione uma conta ao seu aplicativo autenticador. Escolha chave manual, tipo baseado em tempo (TOTP), 6 dígitos e intervalo de 30 segundos.</p><label>Chave de configuração</label><code class="secret">{{ secret }}</code><p class="muted">Não compartilhe esta chave. Ela só é exibida até a primeira confirmação.</p>{% else %}<p>Informe o código do aplicativo autenticador ou um código de recuperação ainda não utilizado.</p>{% endif %}<form method="post">{% csrf_token %}<label for="code">Código</label><input id="code" name="code" required autocomplete="one-time-code" maxlength="32" autofocus><button class="button wide" type="submit">Confirmar código</button>{% if enabled %}<button class="button secondary wide" name="action" value="revoke_sessions">Confirmar e encerrar outras sessões</button>{% endif %}</form>{% endif %}<form method="post" action="{% url 'logout' %}" class="section-gap">{% csrf_token %}<button class="link-button">Sair da conta</button></form></div>{% endblock %}
+{% extends 'workspace/auth_base.html' %}
+{% block content %}
+<div class="auth-card">
+  <div class="eyebrow">SEGURANÇA DA CONTA</div>
+  <h2>{% if enabled %}Confirme seu segundo fator{% elif optional %}Proteção extra, se você quiser{% else %}Ative a autenticação em duas etapas{% endif %}</h2>
+  {% if optional %}<p>Seu acesso já funciona com usuário e senha. O autenticador é opcional nesta conta; se ativá-lo, o código será solicitado nos próximos acessos.</p><p><a class="button" href="{% url 'home' %}">Voltar ao meu painel</a></p>{% endif %}
+  {% if error %}<div class="notice error">{{ error }}</div>{% endif %}
+  {% if codes %}
+    <div class="notice success">Autenticação em dois fatores ativada. Guarde estes códigos de recuperação em local seguro; cada código funciona uma vez.</div>
+    <div class="recovery-codes">{% for code in codes %}<code>{{ code }}</code>{% endfor %}</div>
+    <a href="{% url 'home' %}" class="button">Continuar</a>
+  {% else %}
+    {% if secret %}<p>Adicione uma conta ao seu aplicativo autenticador. Escolha chave manual, tipo baseado em tempo (TOTP), 6 dígitos e intervalo de 30 segundos.</p><label>Chave de configuração</label><code class="secret">{{ secret }}</code><p class="muted">Não compartilhe esta chave. Ela só é exibida até a primeira confirmação.</p>
+    {% else %}<p>Informe o código do aplicativo autenticador ou um código de recuperação ainda não utilizado.</p>{% endif %}
+    <form method="post">{% csrf_token %}<label for="code">Código</label><input id="code" name="code" required autocomplete="one-time-code" maxlength="32" autofocus><button class="button wide" type="submit">Confirmar código</button>{% if enabled %}<button class="button secondary wide" name="action" value="revoke_sessions">Confirmar e encerrar outras sessões</button>{% endif %}</form>
+  {% endif %}
+  <p><a href="{% url 'password_change' %}">Alterar minha senha</a></p>
+  <form method="post" action="{% url 'logout' %}" class="section-gap">{% csrf_token %}<button class="link-button">Sair da conta</button></form>
+</div>
+{% endblock %}

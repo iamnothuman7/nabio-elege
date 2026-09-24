@@ -1,0 +1,7 @@
+{% extends 'workspace/base.html' %}{% load static %}{% block content %}
+<link rel="stylesheet" href="{% static 'workspace/platform.css' %}">
+<section class="page-heading"><div><div class="eyebrow">ADMINISTRAÇÃO DA PLATAFORMA</div><h1>Novo usuário de cliente</h1><p>Escolha a campanha e exatamente o que o novo acesso poderá usar. Esta ação não cria superadministradores.</p></div><a class="button secondary" href="{% url 'platform_dashboard' %}">Voltar</a></section>
+<form method="post" class="panel padded">{% csrf_token %}{{ form.non_field_errors }}<div class="form-grid">{% include 'workspace/form_field.html' with field=form.campaign %}{% include 'workspace/form_field.html' with field=form.username %}{% include 'workspace/form_field.html' with field=form.password %}</div>{% include 'workspace/permission_choices.html' %}
+<details class="advanced-options" {% if form.role.errors %}open{% endif %}><summary>Reutilizar um perfil de permissões · avançado</summary><p>Use somente se quiser conceder todas as permissões de um perfil já existente. Nesse caso, deixe a lista de permissões individuais desmarcada.</p>{% include 'workspace/form_field.html' with field=form.role %}</details>
+<p class="form-intro section-gap">Entregue a senha inicial por um canal seguro. Novas contas precisam alterá-la e configurar o autenticador no primeiro acesso. As contas existentes não são modificadas.</p><div class="form-footer"><button class="button" type="submit">Criar usuário</button></div></form>
+{% endblock %}

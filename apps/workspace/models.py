@@ -18,6 +18,9 @@ class SecurityProfile(models.Model):
     failures = models.PositiveSmallIntegerField(default=0)
     locked_until = models.DateTimeField(null=True, blank=True)
 
+    password_change_required = models.BooleanField(default=False)
+    password_changed_at = models.DateTimeField(null=True, blank=True)
+
 
 class LoginGuard(models.Model):
     key = models.CharField(max_length=64, primary_key=True)
@@ -64,6 +67,16 @@ class LegalCase(Reviewable):
     case_type = models.CharField("Natureza", max_length=80)
     source_ref = models.URLField("Fonte", blank=True)
     restricted_document = models.ForeignKey("core.Document", on_delete=models.PROTECT, null=True, blank=True)
+
+
+class LegalCaseAccess(CampaignScopedModel):
+    legal_case = models.ForeignKey(LegalCase, on_delete=models.PROTECT, related_name="access_grants")
+    membership = models.ForeignKey("campaigns.Membership", on_delete=models.PROTECT)
+    can_manage_access = models.BooleanField(default=False)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["legal_case", "membership"], name="uniq_legal_case_membership")]
 
 
 class RegulatoryDeadline(Reviewable):
@@ -217,10 +230,68 @@ class StockReservation(CampaignScopedModel):
     quantity = models.DecimalField(max_digits=18, decimal_places=4)
     purpose = models.CharField("Finalidade administrativa", max_length=180)
     expires_at = models.DateTimeField("Expira em")
-    status = models.CharField(max_length=16, choices=[("active", "Ativa"), ("released", "Liberada"), ("consumed", "Consumida")], default="active")
+    status = models.CharField(max_length=16, choices=[("active", "Ativa"), ("released", "Liberada"), ("consumed", "Consumida"), ("expired", "Expirada")], default="active")
 
     class Meta:
         constraints = [models.CheckConstraint(condition=models.Q(quantity__gt=0), name="stock_reservation_positive")]
+
+
+class StockTransfer(CampaignScopedModel):
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Preparando envio"
+        IN_TRANSIT = "in_transit", "Em trânsito"
+        RECEIVED = "received", "Recebida integralmente"
+        RETURNED = "returned", "Saldo devolvido à origem"
+        CANCELLED = "cancelled", "Cancelada antes do envio"
+
+    item = models.ForeignKey("operations.StockItem", on_delete=models.PROTECT)
+    source_warehouse = models.ForeignKey("operations.Warehouse", on_delete=models.PROTECT, related_name="outgoing_transfers")
+    destination_warehouse = models.ForeignKey("operations.Warehouse", on_delete=models.PROTECT, related_name="incoming_transfers")
+    quantity = models.DecimalField("Quantidade a enviar", max_digits=18, decimal_places=4)
+    received_quantity = models.DecimalField(max_digits=18, decimal_places=4, default=0)
+    returned_quantity = models.DecimalField(max_digits=18, decimal_places=4, default=0)
+    purpose = models.CharField("Finalidade operacional", max_length=180)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.DRAFT)
+    dispatched_at = models.DateTimeField(null=True, blank=True)
+    dispatched_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["campaign", "status"], name="stock_transfer_campaign_status")]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(quantity__gt=0), name="transfer_quantity_positive"),
+            models.CheckConstraint(condition=~models.Q(source_warehouse=models.F("destination_warehouse")), name="transfer_different_warehouses"),
+            models.CheckConstraint(condition=models.Q(received_quantity__gte=0, returned_quantity__gte=0), name="transfer_settled_nonnegative"),
+            models.CheckConstraint(condition=models.Q(quantity__gte=models.F("received_quantity") + models.F("returned_quantity")), name="transfer_settled_within_total"),
+        ]
+
+    @property
+    def in_transit_quantity(self):
+        return self.quantity - self.received_quantity - self.returned_quantity if self.status == self.Status.IN_TRANSIT else 0
+
+    def clean(self):
+        super().clean()
+        if self.source_warehouse_id and self.source_warehouse_id == self.destination_warehouse_id:
+            raise ValidationError({"destination_warehouse": "Escolha um depósito diferente da origem."})
+
+    def __str__(self):
+        return f"Transferência {str(self.pk)[:8]}"
+
+
+class StockTransferReceipt(CampaignScopedModel):
+    transfer = models.ForeignKey(StockTransfer, on_delete=models.PROTECT, related_name="receipts")
+    kind = models.CharField(max_length=16, choices=[("receive", "Recebimento no destino"), ("return", "Devolução à origem")])
+    quantity = models.DecimalField(max_digits=18, decimal_places=4)
+    evidence_reference = models.CharField("Comprovante operacional", max_length=180)
+    movement = models.OneToOneField("operations.StockMovement", on_delete=models.PROTECT)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(quantity__gt=0), name="transfer_receipt_positive")]
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValidationError("Comprovantes de transferência não podem ser alterados.")
+        return super().save(*args, **kwargs)
 
 
 class PurchaseReceipt(CampaignScopedModel):
@@ -278,6 +349,10 @@ class CampaignProfile(CampaignScopedModel):
 
 
 class Territory(CampaignScopedModel):
+    area_kind = models.CharField(max_length=20, choices=[("operation", "Território operacional"), ("district", "Distrito"), ("neighborhood", "Bairro"), ("community", "Comunidade")], default="operation")
+    boundary = models.JSONField(default=dict, blank=True)
+    source_reference = models.CharField(max_length=500, blank=True)
+    public_area_confirmed = models.BooleanField(default=False)
     name = models.CharField("Nome do território", max_length=120)
     municipality = models.CharField("Município", max_length=120)
     state = models.CharField("UF", max_length=2)
@@ -288,6 +363,10 @@ class Territory(CampaignScopedModel):
 
     def clean(self):
         super().clean()
+        from .geo_validation import validate_boundary
+        validate_boundary(self.boundary)
+        if self.boundary and (not self.public_area_confirmed or len(self.source_reference.strip()) < 3):
+            raise ValidationError("Identifique a fonte e confirme que o contorno é uma área pública, não uma localização individual.")
         if self.state not in {"AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"}:
             raise ValidationError({"state": "Informe uma UF brasileira válida, em maiúsculas."})
         if self.ibge_code and (len(self.ibge_code) != 7 or not self.ibge_code.isdigit()):
@@ -301,8 +380,8 @@ class CampaignBase(CampaignScopedModel):
     territory = models.ForeignKey(Territory, on_delete=models.PROTECT)
     base_type = models.CharField("Tipo", max_length=20, choices=[("committee", "Comitê eleitoral"), ("support", "Ponto de apoio"), ("event", "Local de evento público"), ("logistics", "Base de logística")], default="committee")
     public_address = models.CharField("Endereço público do local", max_length=250)
-    latitude = models.DecimalField("Latitude", max_digits=9, decimal_places=6)
-    longitude = models.DecimalField("Longitude", max_digits=9, decimal_places=6)
+    latitude = models.DecimalField("Latitude", max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField("Longitude", max_digits=9, decimal_places=6, null=True, blank=True)
     coordinator = models.ForeignKey("campaigns.Membership", on_delete=models.PROTECT, null=True, blank=True)
     opening_hours = models.CharField("Horário de funcionamento", max_length=160, blank=True)
     accessible = models.BooleanField("Acessibilidade conferida", default=False)
@@ -315,6 +394,8 @@ class CampaignBase(CampaignScopedModel):
             raise ValidationError({"latitude": "A latitude deve ficar entre -85 e 85."})
         if self.longitude is not None and not -180 <= self.longitude <= 180:
             raise ValidationError({"longitude": "A longitude deve ficar entre -180 e 180."})
+        if (self.latitude is None) != (self.longitude is None):
+            raise ValidationError("Preencha latitude e longitude juntas ou deixe as duas vazias.")
         if not self.public_location_confirmed:
             raise ValidationError({"public_location_confirmed": "O mapa aceita somente locais de operação públicos, sem residências de eleitores."})
 
@@ -385,6 +466,8 @@ class ElectorRegistration(CampaignScopedModel):
     status = models.CharField(max_length=20, choices=[("pending", "Aguardando revisão"), ("registered", "Cadastro conferido"), ("suppressed", "Contato suprimido")], default="pending")
     evidence_reference = models.CharField("Referência da manifestação / solicitação", max_length=180)
     consent_verified_at = models.DateTimeField(null=True, blank=True)
+    first_vote = models.BooleanField("Primeira vez votando", null=True, blank=True)
+    voter_title_ciphertext = models.BinaryField(null=True, blank=True, editable=False)
 
     def clean(self):
         super().clean()

@@ -305,7 +305,7 @@ Cookies de sessão devem usar `Secure`, `HttpOnly` e `SameSite=Lax` (ou `Strict`
 - Senhas armazenadas somente com hash adaptativo do framework; nunca reversíveis.
 - Login com rate limit, bloqueio progressivo e logs de tentativa sem senha.
 - Verificação de e-mail quando a conta der acesso a dados ou operações sensíveis.
-- MFA obrigatório para administradores e recomendado para gestores.
+- MFA obrigatório por padrão; exceções de acesso apenas por senha exigem autorização expressa do proprietário, escopo por conta, auditoria, senha forte e revogação das sessões anteriores. A exceção solicitada em 22/09/2026 está documentada em `docs/superadmin-usage.md`; não desativa a política das demais contas.
 - Sessões revogáveis após troca de senha, logout global ou alteração de privilégio.
 - Permissões avaliadas no backend por organização, unidade, cargo e ação.
 - Auditoria para login, exportação, alteração de permissão, pagamentos, documentos, exclusões e integrações.

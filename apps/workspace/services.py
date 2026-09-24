@@ -19,6 +19,7 @@ from apps.operations.models import PurchaseItem, PurchaseOrder, StockBalance, St
 from apps.operations.services import add_task_dependency, apply_stock_movement
 from .models import AggregateResult, AssetBooking, BrandAsset, CampaignEvent, ClosureItem, EditorialContent, ElectionShift, LogisticsTrip, Occurrence, PurchaseReceipt, Reviewable, ReviewDecision, StockReservation
 from .models import ElectorRegistration, FieldActivity, FieldAssignment, FieldWorker
+from .models import StockTransfer
 
 
 def require_writable(campaign):
@@ -41,6 +42,8 @@ def check_independent(actor, obj):
 
 
 def can_edit(obj):
+    if isinstance(obj, StockTransfer):
+        return obj.status == "draft"
     if isinstance(obj, FieldAssignment):
         return obj.status == "scheduled"
     if isinstance(obj, AssetBooking):
@@ -114,8 +117,11 @@ def reserve_stock(obj):
     obj.quantity = quantity_value(obj.quantity)
     if obj.expires_at <= timezone.now():
         raise ValidationError("A reserva precisa expirar no futuro.")
-    # Same lock order as apply_stock_movement, including reservations created via forms.
-    type(obj.item).objects.select_for_update().get(pk=obj.item_id)
+    from apps.operations.services import lock_stock_item
+    from .inventory import expire_item_reservations_locked
+    item = lock_stock_item(actor=obj.created_by, item_id=obj.item_id)
+    obj.full_clean()
+    expire_item_reservations_locked(item)
     type(obj.warehouse).objects.select_for_update().get(pk=obj.warehouse_id)
     balance, _ = StockBalance.objects.select_for_update().get_or_create(item=obj.item, warehouse=obj.warehouse)
     if balance.available_quantity < obj.quantity:
@@ -261,7 +267,10 @@ def purchase_action(actor, obj, action, data, reason):
 
 
 def run_domain_action(actor, config, obj, action, data, reason):
-    if isinstance(obj, FieldWorker):
+    if isinstance(obj, StockTransfer):
+        from .inventory import transfer_action
+        transfer_action(actor, obj, action, data, reason)
+    elif isinstance(obj, FieldWorker):
         if action == "train" and obj.training_status == "pending":
             obj.training_status = "completed"
         elif action == "pause" and obj.status == "active":
@@ -403,10 +412,10 @@ def run_domain_action(actor, config, obj, action, data, reason):
         balance.reserved_quantity -= obj.quantity
         balance.full_clean()
         balance.save()
-        if action == "consume":
-            apply_stock_movement(actor=actor, item_id=obj.item_id, warehouse_id=obj.warehouse_id, kind="exit", quantity=obj.quantity, reason=reason, origin_type="reservation", origin_id=obj.pk)
         obj.status = "consumed" if action == "consume" else "released"
         obj.save()
+        if action == "consume":
+            apply_stock_movement(actor=actor, item_id=obj.item_id, warehouse_id=obj.warehouse_id, kind="exit", quantity=obj.quantity, reason=reason, origin_type="reservation", origin_id=obj.pk)
     elif isinstance(obj, AssetBooking):
         transitions = {("reserved", "accept"): "accepted", ("accepted", "return"): "returned", ("reserved", "cancel"): "cancelled"}
         target = transitions.get((obj.status, action))
@@ -450,10 +459,14 @@ def run_domain_action(actor, config, obj, action, data, reason):
 
 @transaction.atomic
 def execute_action(*, actor, campaign, config, object_id, action, version, command_id, data):
-    Campaign.objects.select_for_update().get(pk=campaign.pk)
+    campaign = Campaign.objects.select_for_update().get(pk=campaign.pk)
     require_writable(campaign)
     permission = config.review if action in {"approve", "reject"} and config.review else config.write
     require_campaign_permission(actor, campaign, permission)
+    from .legal_access import require_object_access
+    obj = config.model.objects.select_for_update().get(pk=object_id, campaign=campaign)
+    # Recheck before returning cached/idempotent results as well as mutations.
+    require_object_access(actor, obj)
     try:
         uuid.UUID(command_id)
     except (ValueError, TypeError, AttributeError):
@@ -466,7 +479,6 @@ def execute_action(*, actor, campaign, config, object_id, action, version, comma
         if existing.request_hash != digest:
             raise ValidationError("Este comando já foi usado com outro conteúdo.")
         return False
-    obj = config.model.objects.select_for_update().get(pk=object_id, campaign=campaign)
     if isinstance(obj, ElectorRegistration) and obj.owner.user_id != actor.pk:
         require_campaign_permission(actor, campaign, "electors.read.campaign")
     check_version(obj, version)

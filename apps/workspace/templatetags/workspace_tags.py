@@ -3,10 +3,36 @@ from decimal import Decimal
 
 from django import template
 from django.utils import timezone
+from django.utils.html import format_html
 
 from apps.workspace.registry import LABELS
 
 register = template.Library()
+
+
+@register.filter
+def permission_name(code):
+    from apps.workspace.access_choices import permission_label
+    return permission_label(code)
+
+
+@register.inclusion_tag("workspace/page_guide.html")
+def page_help(active, config=None):
+    from apps.workspace.guidance import PAGE_HELP
+    return {"guidance": PAGE_HELP.get(active) or (getattr(config, "subtitle", "") if config else "")}
+
+
+@register.simple_tag
+def nav_icon(name):
+    from apps.workspace.navigation_icons import ALIASES, PATHS
+
+    path = PATHS.get(ALIASES.get(name, name), PATHS["grid"])
+    return format_html(
+        '<svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" '
+        'fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" '
+        'stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="{}"/></svg>',
+        path,
+    )
 
 
 @register.filter

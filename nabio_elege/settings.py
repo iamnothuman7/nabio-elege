@@ -14,7 +14,9 @@ env = environ.Env(
     DEBUG=(bool, False)
 )
 # Read .env file if it exists
-environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+APP_ENV = os.environ.get('APP_ENV', 'development')
+if APP_ENV not in {'production', 'staging'}:
+    environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 # Quick-start development settings - unsuitable for production
 # SECURITY WARNING: keep the secret key used in production secret!
@@ -60,6 +62,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'apps.core.scope_middleware.CampaignScopeMiddleware',
     'apps.workspace.middleware.AccessSecurityMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -128,7 +131,9 @@ CSRF_COOKIE_SECURE = env.bool('CSRF_COOKIE_SECURE', default=not DEBUG)
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
 SECURE_SSL_REDIRECT = env.bool('SECURE_SSL_REDIRECT', default=False)
-if env.bool('TRUST_PROXY_HEADERS', default=False):
+TRUST_PROXY_HEADERS = env.bool('TRUST_PROXY_HEADERS', default=False)
+TRUSTED_PROXY_IPS = env.list('TRUSTED_PROXY_IPS', default=[])
+if TRUST_PROXY_HEADERS:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 LOGIN_URL = '/entrar/'
 LOGIN_REDIRECT_URL = '/'
@@ -155,6 +160,10 @@ CELERY_BROKER_URL = env('REDIS_URL', default='redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = env('REDIS_URL', default='redis://localhost:6379/0')
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULE = {
+    'expire-stock-reservations': {
+        'task': 'workspace.expire_stock_reservations',
+        'schedule': 60.0,
+    },
     'dispatch-outbox': {
         'task': 'core.dispatch_outbox',
         'schedule': 5.0,

@@ -102,7 +102,9 @@ class WorkspaceTests(TestCase):
         self.assertFalse(has_campaign_permission(admin, self.campaign, "finance.read.campaign"))
         self.client.force_login(admin)
         self.assertEqual(self.client.get(reverse("dashboard", args=[self.campaign.pk])).status_code, 404)
-        self.assertEqual(self.client.get("/admin/").status_code, 404)
+        # Platform inventory is available, but it does not grant campaign access.
+        self.assertContains(self.client.get("/admin/"), "Administração da plataforma")
+        self.assertFalse(campaigns_for_user(admin).exists())
 
     def test_suspended_tenant_and_revoked_membership_deny_access(self):
         self.tenant.status = "suspended"
@@ -234,7 +236,10 @@ class WorkspaceTests(TestCase):
             url = reverse("document_download", args=[self.campaign.pk, doc.pk, version.pk])
             response = self.client.get(url)
             self.assertEqual(response.status_code, 200)
-            response.close()
+            # Consume through Django's test-client iterator so request_finished
+            # doesn't close PostgreSQL's enclosing TestCase transaction.
+            self.assertEqual(b"".join(response.streaming_content), b"%PDF-1.4\nTest")
+            self.assertTrue(response.closed)
             self.member.revoke()
             self.assertEqual(self.client.get(url).status_code, 404)
 

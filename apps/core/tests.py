@@ -72,6 +72,6 @@ class AuditAndOutboxTests(TransactionTestCase):
         self.assertTrue(dispatch_outbox_event(event.id, send_task=sender))
         event.refresh_from_db()
         sender.assert_called_once_with(
-            "forms.process_submission", args=["fictitious-submission"]
+            "forms.process_submission", args=["fictitious-submission", str(self.campaign.pk)]
         )
         self.assertEqual(event.status, OutboxEvent.Status.PUBLISHED)
