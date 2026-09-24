@@ -10,6 +10,18 @@ from apps.workspace.registry import LABELS
 register = template.Library()
 
 
+@register.filter
+def permission_name(code):
+    from apps.workspace.access_choices import permission_label
+    return permission_label(code)
+
+
+@register.inclusion_tag("workspace/page_guide.html")
+def page_help(active, config=None):
+    from apps.workspace.guidance import PAGE_HELP
+    return {"guidance": PAGE_HELP.get(active) or (getattr(config, "subtitle", "") if config else "")}
+
+
 @register.simple_tag
 def nav_icon(name):
     from apps.workspace.navigation_icons import ALIASES, PATHS

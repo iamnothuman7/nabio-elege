@@ -15,6 +15,7 @@ from django.views.decorators.http import require_POST, require_safe
 from apps.campaigns.models import Campaign, Role, Tenant
 from apps.core.models import AuditEvent
 from .platform_metrics import usage_snapshot
+from .access_choices import AccessForm
 from .platform_services import (
     create_customer,
     create_customer_access,
@@ -61,7 +62,7 @@ class CampaignChoice(forms.ModelChoiceField):
         return f"{obj.tenant.name} · {obj.name}"
 
 
-class CustomerAccessForm(forms.Form):
+class CustomerAccessForm(AccessForm):
     campaign = CampaignChoice(
         label="Campanha do cliente",
         queryset=Campaign.objects.none(),
@@ -69,6 +70,7 @@ class CustomerAccessForm(forms.Form):
     role = forms.ModelChoiceField(
         label="Papel de acesso na organização",
         queryset=Role.objects.none(),
+        required=False,
         help_text="O papel deve pertencer à mesma organização da campanha.",
     )
     username = forms.CharField(label="Nome de usuário", max_length=150)
@@ -81,6 +83,8 @@ class CustomerAccessForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["permission_codes"].required = False
+        self.order_fields(["campaign", "username", "password", "permission_codes", "role"])
         self.fields["campaign"].queryset = (
             Campaign.objects.filter(tenant__status="active")
             .exclude(phase="archived")
@@ -97,6 +101,10 @@ class CustomerAccessForm(forms.Form):
     def clean(self):
         data = super().clean()
         campaign, role = data.get("campaign"), data.get("role")
+        if not data.get("permission_codes") and not role:
+            self.add_error("permission_codes", "Marque o que esta pessoa poderá acessar.")
+        if data.get("permission_codes") and role:
+            self.add_error("role", "Deixe o papel vazio ao escolher permissões individuais.")
         if campaign and role and campaign.tenant_id != role.tenant_id:
             self.add_error(
                 "role", "O papel deve pertencer à organização da campanha selecionada."

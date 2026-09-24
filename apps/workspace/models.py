@@ -380,8 +380,8 @@ class CampaignBase(CampaignScopedModel):
     territory = models.ForeignKey(Territory, on_delete=models.PROTECT)
     base_type = models.CharField("Tipo", max_length=20, choices=[("committee", "Comitê eleitoral"), ("support", "Ponto de apoio"), ("event", "Local de evento público"), ("logistics", "Base de logística")], default="committee")
     public_address = models.CharField("Endereço público do local", max_length=250)
-    latitude = models.DecimalField("Latitude", max_digits=9, decimal_places=6)
-    longitude = models.DecimalField("Longitude", max_digits=9, decimal_places=6)
+    latitude = models.DecimalField("Latitude", max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField("Longitude", max_digits=9, decimal_places=6, null=True, blank=True)
     coordinator = models.ForeignKey("campaigns.Membership", on_delete=models.PROTECT, null=True, blank=True)
     opening_hours = models.CharField("Horário de funcionamento", max_length=160, blank=True)
     accessible = models.BooleanField("Acessibilidade conferida", default=False)
@@ -394,6 +394,8 @@ class CampaignBase(CampaignScopedModel):
             raise ValidationError({"latitude": "A latitude deve ficar entre -85 e 85."})
         if self.longitude is not None and not -180 <= self.longitude <= 180:
             raise ValidationError({"longitude": "A longitude deve ficar entre -180 e 180."})
+        if (self.latitude is None) != (self.longitude is None):
+            raise ValidationError("Preencha latitude e longitude juntas ou deixe as duas vazias.")
         if not self.public_location_confirmed:
             raise ValidationError({"public_location_confirmed": "O mapa aceita somente locais de operação públicos, sem residências de eleitores."})
 
@@ -464,6 +466,8 @@ class ElectorRegistration(CampaignScopedModel):
     status = models.CharField(max_length=20, choices=[("pending", "Aguardando revisão"), ("registered", "Cadastro conferido"), ("suppressed", "Contato suprimido")], default="pending")
     evidence_reference = models.CharField("Referência da manifestação / solicitação", max_length=180)
     consent_verified_at = models.DateTimeField(null=True, blank=True)
+    first_vote = models.BooleanField("Primeira vez votando", null=True, blank=True)
+    voter_title_ciphertext = models.BinaryField(null=True, blank=True, editable=False)
 
     def clean(self):
         super().clean()

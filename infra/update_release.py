@@ -1,7 +1,9 @@
-"""Scoped application-only rollout. Refuses dependency, schema and config changes.
+"""Scoped rollout. Application-only unless the named expansion is explicit.
 
 Retains previous code/static assets, backs up first, reloads only Nabio services.
 Requires a staging validation marker for the exact production SHA.
+The optional registration expansion is hash-pinned and needs a compatible reader
+already active. Dependency/settings changes and all other migrations are refused.
 """
 
 import argparse
@@ -55,7 +57,7 @@ def services(root, *, was_active):
         )
 
 
-def rollout(root, sha, port, environment_name):
+def rollout(root, sha, port, environment_name, registration_expansion=False):
     deploy.DIAGNOSTIC_ROOT = root
     previous = (root / "current").resolve(strict=True)
     releases = (root / "releases").resolve(strict=True)
@@ -80,7 +82,7 @@ def rollout(root, sha, port, environment_name):
         ["git", "diff", "--name-only", previous.name, sha], cwd=release
     ).splitlines()
     if any(
-        "/migrations/" in path
+        ("/migrations/" in path and not registration_expansion)
         or path.startswith("nabio_elege/")
         or path.startswith("requirements")
         for path in changes
@@ -88,6 +90,10 @@ def rollout(root, sha, port, environment_name):
         raise RuntimeError(
             "Schema/dependency/settings changes require a separate procedure"
         )
+    if registration_expansion:
+        from registration_expansion import validate_source
+
+        validate_source(release, previous, changes, deploy.run)
     if (release / "requirements-production.lock").read_bytes() != (
         previous / "requirements-production.lock"
     ).read_bytes():
@@ -112,7 +118,12 @@ def rollout(root, sha, port, environment_name):
 
     print(manage("check", "--deploy"), flush=True)
     print(manage("makemigrations", "--check", "--dry-run"), flush=True)
-    # Never applies migrations. Refuse even pre-existing unapplied migrations.
+    # Default remains application-only. One explicit, hash-pinned expansion has
+    # its own exact-plan, compatible-reader and timeout checks.
+    if registration_expansion:
+        from registration_expansion import apply
+
+        apply(root, release, values, deploy.run)
     print(manage("migrate", "--check"), flush=True)
     print(manage("check_rls"), flush=True)
     print(manage("check_templates"), flush=True)
@@ -173,7 +184,10 @@ def rollout(root, sha, port, environment_name):
         "venv_source": str((release / ".venv").resolve()),
         "backup": backup_folder.name,
         "utc": deploy.utc(),
-        "migrations_applied": False,
+        "migrations_applied": registration_expansion,
+        "migration": "workspace.0009_simpler_registration"
+        if registration_expansion
+        else None,
     }
     deploy.write_new(
         root / "shared" / ("rollout-" + deploy.utc() + ".json"), json.dumps(record)
@@ -189,6 +203,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("environment", choices=deploy.ENVIRONMENTS)
     parser.add_argument("--sha", required=True)
+    parser.add_argument(
+        "--registration-expansion",
+        action="store_true",
+        help="Apply only the reviewed workspace.0009 additive expansion",
+    )
     args = parser.parse_args()
     name, port, _, _ = deploy.ENVIRONMENTS[args.environment]
     root = Path("/var/www/apps") / name
@@ -201,4 +220,4 @@ if __name__ == "__main__":
     with (root / "shared/update-release.lock").open("a") as lock:
         os.chmod(lock.name, 0o600)
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        rollout(root, args.sha, port, args.environment)
+        rollout(root, args.sha, port, args.environment, args.registration_expansion)

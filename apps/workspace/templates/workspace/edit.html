@@ -6,13 +6,17 @@
 <form method="post" enctype="multipart/form-data">
 {% csrf_token %}<input type="hidden" name="command_id" value="{{ command_id }}"><input type="hidden" name="row_version" value="{{ obj.row_version }}">
 {{ form.non_field_errors }}
+<p class="form-intro">Os campos marcados como opcionais podem ficar vazios. Toque ou passe o mouse no ? para ver uma explicação.</p>
+{% if form.privacy_setup_needed %}<div class="notice">Antes do primeiro cadastro, o responsável pela privacidade precisa revisar e ativar o uso autorizado destes dados em Finalidades de tratamento. Nenhuma autorização é criada automaticamente.</div>{% endif %}
+{% if form.single_purpose %}<p class="form-intro">Uso dos dados: {{ form.single_purpose.description }}. Aplicado automaticamente pela configuração da campanha.</p>{% endif %}
 {% if config.key == 'territorios' %}{% include 'workspace/address_lookup.html' %}{% endif %}
 <div class="form-grid">
 {% for field in form %}
   {% if config.key == 'territorios' %}
     {% if field.name != 'ibge_code' and field.name != 'source_reference' and field.name != 'public_area_confirmed' %}{% include 'workspace/form_field.html' %}{% endif %}
-  {% else %}{% include 'workspace/form_field.html' %}{% endif %}
+  {% elif field.name not in form.advanced_names %}{% include 'workspace/form_field.html' %}{% endif %}
 {% endfor %}
+{% if form.advanced_fields %}<details class="advanced-options" {% if form.advanced_errors %}open{% endif %}><summary>Mais detalhes · opcional</summary><div class="form-grid">{% for field in form.advanced_fields %}{% include 'workspace/form_field.html' %}{% endfor %}</div></details>{% endif %}
 {% if config.key == 'territorios' %}
 <details class="territory-advanced" {% if form.ibge_code.errors or form.source_reference.errors or form.public_area_confirmed.errors %}open{% endif %}>
 <summary>Referências e contorno no mapa · opcional</summary>

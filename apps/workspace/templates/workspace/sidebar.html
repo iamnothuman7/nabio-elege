@@ -14,8 +14,11 @@
     <a class="nav-main {% if active == 'dashboard' %}selected{% endif %}" {% if active == 'dashboard' %}aria-current="page"{% endif %} href="{% url 'dashboard' campaign.id %}" title="Central eleitoral" aria-label="Central eleitoral">{% nav_icon 'dashboard' %}<span class="sidebar-label">Central eleitoral</span></a>
     {% if map_access %}<a class="nav-main {% if active == 'map' %}selected{% endif %}" {% if active == 'map' %}aria-current="page"{% endif %} href="{% url 'campaign_map' campaign.id %}" title="Mapa da campanha" aria-label="Mapa da campanha">{% nav_icon 'map' %}<span class="sidebar-label">Mapa da campanha</span></a>{% endif %}
     {% for group in navigation %}
+      {% if group.name == 'Suprimentos' %}
+        {% if 'stock.manage.campaign' in permissions and campaign.phase != 'archived' %}<a class="nav-main {% if active == 'materials' %}selected{% endif %}" {% if active == 'materials' %}aria-current="page"{% endif %} href="{% url 'stock_movement' campaign.id %}" title="Materiais e estoque" aria-label="Materiais e estoque">{% nav_icon 'itens' %}<span class="sidebar-label">Materiais e estoque</span></a>{% endif %}
+      {% endif %}
       <details class="nav-group" data-nav-group="{{ group.name|slugify }}" {% if group|group_active:active or group.name == 'Campanha eleitoral' %}open{% endif %}>
-        <summary title="{{ group.name }}" aria-label="{{ group.name }}">{% nav_icon group.name|slugify %}<span class="sidebar-label">{{ group.name }}</span></summary>
+        <summary title="{{ group.name }}" aria-label="{{ group.name }}">{% nav_icon group.name|slugify %}<span class="sidebar-label">{% if group.name == 'Suprimentos' %}Suprimentos · avançado{% else %}{{ group.name }}{% endif %}</span></summary>
         {% for module in group.modules %}
           <a class="nav-module {% if active == module.key %}selected{% endif %}" {% if active == module.key %}aria-current="page"{% endif %} href="{% url 'module_list' campaign.id module.key %}" title="{{ module.title }}" aria-label="{{ module.title }}">{% nav_icon module.key %}<span class="sidebar-label">{{ module.title }}</span></a>
         {% endfor %}

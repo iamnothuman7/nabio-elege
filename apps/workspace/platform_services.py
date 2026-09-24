@@ -97,8 +97,14 @@ def create_customer(
 
 
 @transaction.atomic
-def create_customer_access(*, actor, campaign, role, username, password):
+def create_customer_access(*, actor, campaign, role=None, permission_codes=None, username, password):
     require_platform_admin(actor)
+    if permission_codes is not None:
+        if role is not None:
+            raise ValidationError("Escolha permissões individuais ou um papel existente, não os dois.")
+        return create_selected_access(actor=actor, campaign=campaign, permission_codes=permission_codes, username=username, password=password, platform=True)
+    if role is None:
+        raise ValidationError("Escolha permissões individuais ou um papel existente.")
     campaign = Campaign.objects.select_related("tenant").get(pk=campaign.pk)
     role = Role.objects.get(pk=role.pk)
     if campaign.tenant.status != "active" or campaign.phase == "archived":
@@ -123,6 +129,33 @@ def create_customer_access(*, actor, campaign, role, username, password):
         resource_id=user.pk,
         minimized_diff={"campaign_id": str(campaign.pk), "role_id": str(role.pk)},
     )
+    return user
+
+
+@transaction.atomic
+def create_selected_access(*, actor, campaign, permission_codes, username, password, platform=False):
+    from uuid import uuid4
+    from apps.campaigns.services import membership_for, require_campaign_permission
+    from .access_choices import validate_selection
+
+    campaign = Campaign.objects.select_for_update().select_related("tenant").get(pk=campaign.pk)
+    if campaign.tenant.status != "active" or campaign.phase == "archived":
+        raise ValidationError("A organização deve estar ativa e a campanha não pode estar arquivada.")
+    if platform:
+        require_platform_admin(actor)
+        allowed = set(Permission.objects.values_list("code", flat=True))
+    else:
+        require_campaign_permission(actor, campaign, "memberships.manage.campaign")
+        allowed = set(membership_for(actor, campaign).role.permissions.values_list("code", flat=True))
+    selected = validate_selection(permission_codes, allowed)
+    user = account(username, password)
+    role = Role.objects.create(tenant=campaign.tenant, code=f"individual-{uuid4().hex}", name=f"Acesso individual · {username}"[:120])
+    role.permissions.set(Permission.objects.filter(code__in=selected))
+    member = Membership.objects.create(user=user, tenant=campaign.tenant, campaign=campaign, role=role, status="active", invited_by=actor)
+    if platform:
+        platform_audit(actor=actor, action="platform.user_created", resource_type="user", resource_id=user.pk, minimized_diff={"campaign_id": str(campaign.pk), "role_id": str(role.pk), "permissions": sorted(selected)})
+    else:
+        append_audit_event(actor=actor, tenant=campaign.tenant, campaign=campaign, action="membership.created", resource_type="membership", resource_id=member.pk, minimized_diff={"permissions": sorted(selected)})
     return user
 
 

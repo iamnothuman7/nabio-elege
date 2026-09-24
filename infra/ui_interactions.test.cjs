@@ -12,6 +12,37 @@ class Element {
   append(...items) {this.children.push(...items);}
   replaceChildren(...items) {this.children=items;}
 }
+function guidance() {
+  const doc=new Element(), win=new Element();
+  const buttons=[new Element(),new Element()], panels=[new Element(),new Element()], wrappers=[new Element(),new Element()];
+  buttons.forEach((button,i)=>{
+    button.attrs={'aria-controls':String(i),'aria-expanded':'false'};
+    button.getAttribute=key=>button.attrs[key];button.setAttribute=(key,value)=>button.attrs[key]=value;
+    button.closest=()=>wrappers[i]; button.getBoundingClientRect=()=>({left:330,top:690,bottom:720});
+    panels[i].hidden=true;panels[i].style={};panels[i].getBoundingClientRect=()=>({width:340,height:120});
+  });
+  doc.querySelectorAll=()=>buttons;doc.getElementById=id=>panels[Number(id)];doc.documentElement={clientWidth:375};
+  win.innerWidth=390;win.innerHeight=760;
+  vm.runInNewContext(source('guidance.js'),{document:doc,window:win,setTimeout,clearTimeout});
+  return {doc,win,buttons,panels,wrappers};
+}
+test('help opens on focus, closes with Escape and fits narrow viewport',()=>{
+  const ui=guidance();ui.buttons[0].fire('focus');
+  assert.equal(ui.panels[0].hidden,false);assert.equal(ui.panels[0].style.left,'23px');assert.equal(ui.panels[0].style.top,'562px');
+  assert.equal(ui.buttons[0].attrs['aria-expanded'],'true');
+  ui.doc.fire('keydown',{key:'Escape'});assert.equal(ui.panels[0].hidden,true);
+});
+test('help can be toggled by touch and only one explanation is open',()=>{
+  const ui=guidance();ui.buttons[0].fire('click');ui.buttons[1].fire('click');
+  assert.equal(ui.panels[0].hidden,true);assert.equal(ui.panels[1].hidden,false);
+  ui.buttons[1].fire('click');assert.equal(ui.panels[1].hidden,true);
+});
+test('hover help ignores touch enter and closes on outside click or scroll',()=>{
+  const ui=guidance();ui.wrappers[0].fire('pointerenter',{pointerType:'touch'});assert.equal(ui.panels[0].hidden,true);
+  ui.wrappers[0].fire('pointerenter',{pointerType:'mouse'});assert.equal(ui.panels[0].hidden,false);
+  ui.doc.fire('pointerdown',{target:{closest:()=>null}});assert.equal(ui.panels[0].hidden,true);
+  ui.buttons[0].fire('focus');ui.doc.fire('scroll');assert.equal(ui.panels[0].hidden,true);
+});
 function sidebar(saved, blocked=false) {
   const nav = new Element(), side = new Element(), group = new Element(), win = new Element();
   nav.scrollTop=0; nav.clientHeight=400; group.open=false; group.dataset.navGroup='operacao';

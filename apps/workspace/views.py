@@ -16,6 +16,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+from django.views.decorators.debug import sensitive_post_parameters
 
 from apps.campaigns.models import Campaign, CampaignPhaseEvent, Membership, Role
 from apps.campaigns.services import campaigns_for_user, has_campaign_permission, membership_for, require_campaign_permission
@@ -25,7 +26,6 @@ from apps.core.services import append_audit_event, canonical_json_hash
 from apps.finance.models import AccountingBatch, BankEntry, BudgetVersion, Obligation, PaymentRecord
 from apps.forms.models import Form, Person, ServiceRequest
 from apps.operations.models import PurchaseItem, StockBalance, StockItem, StockMovement, Task, Warehouse
-from apps.operations.services import apply_stock_movement
 from .document_services import private_storage, require_document_access, rescan_document, upload_document
 from .models import AssetBooking, ClosureItem, EditorialContent, Invitation, OfficialDataset, Reviewable, StockReservation
 from .models import ElectorRegistration, FieldActivity, FieldAssignment, FieldWorker
@@ -160,6 +160,7 @@ def module_list(request, campaign_id, key):
 
 
 @login_required
+@sensitive_post_parameters("registration_name", "registration_email", "registration_phone", "voter_title")
 def module_edit(request, campaign_id, key, object_id=None):
     context = campaign_context(request, campaign_id)
     config = config_for(context, key)
@@ -189,7 +190,7 @@ def module_edit(request, campaign_id, key, object_id=None):
                     check_version(instance, request.POST.get("row_version"))
                     if not can_edit(instance):
                         raise ValidationError("Este registro não pode mais ser editado.")
-                    form = form_cls(request.POST, instance=instance, campaign=context["campaign"], actor=request.user)
+                form = form_cls(request.POST, instance=instance, campaign=locked_campaign, actor=request.user)
                 command = str(uuid.UUID(request.POST.get("command_id", "")))
                 route = f"workspace/{key}/save/{object_id or 'new'}"
                 hashed = hashlib.sha256(command.encode()).hexdigest()
@@ -202,6 +203,8 @@ def module_edit(request, campaign_id, key, object_id=None):
                         from apps.core.crypto import blind_index, encrypt_json
                         from apps.forms.models import ContactPoint
                         obj.source = "assisted"
+                        voter_title = form.cleaned_data.get("voter_title")
+                        obj.voter_title_ciphertext = encrypt_json({"value": voter_title}) if voter_title else None
                         obj.person = Person.objects.create(tenant=obj.tenant, campaign=obj.campaign, created_by=request.user, retention_policy=obj.purpose.retention_policy, display_name_ciphertext=encrypt_json({"value": form.cleaned_data["registration_name"]}))
                         for field, kind in [("registration_email", "email"), ("registration_phone", "phone")]:
                             value = form.cleaned_data.get(field)
@@ -306,6 +309,7 @@ def module_detail(request, campaign_id, key, object_id):
     if isinstance(obj, ElectorRegistration):
         from apps.core.crypto import decrypt_json
         context["private_person"] = {"name": decrypt_json(obj.person.display_name_ciphertext).get("value", ""), "contacts": [{"type": c.get_type_display(), "value": decrypt_json(c.value_ciphertext).get("value", ""), "verification": c.get_verification_state_display()} for c in obj.person.contact_points.all()]}
+        context["private_person"]["voter_title"] = decrypt_json(obj.voter_title_ciphertext).get("value", "") if obj.voter_title_ciphertext else ""
         audit(request.user, obj, "elector.registration_viewed")
     if isinstance(obj, FieldActivity):
         context["field_assignments"] = obj.assignments.select_related("worker")
@@ -371,20 +375,17 @@ def stock_movement(request, campaign_id):
     context = campaign_context(request, campaign_id)
     require_campaign_permission(request.user, context["campaign"], "stock.manage.campaign")
     require_writable(context["campaign"])
-    if request.method == "POST":
+    from .materials import MovementForm, record_movement
+    form = MovementForm(request.POST if request.method == "POST" else None, campaign=context["campaign"])
+    if request.method == "POST" and form.is_valid():
         try:
-            with transaction.atomic():
-                Campaign.objects.select_for_update().get(pk=campaign_id)
-                item = StockItem.objects.get(pk=request.POST.get("item"), campaign_id=campaign_id)
-                warehouse = Warehouse.objects.get(pk=request.POST.get("warehouse"), campaign_id=campaign_id)
-                origin_id = uuid.UUID(request.POST.get("command_id", ""))
-                if not StockMovement.objects.filter(campaign_id=campaign_id, origin_type="manual", origin_id=origin_id).exists():
-                    apply_stock_movement(actor=request.user, item_id=item.pk, warehouse_id=warehouse.pk, kind=request.POST.get("kind"), quantity=request.POST.get("quantity"), reason=request.POST.get("reason", ""), origin_type="manual", origin_id=origin_id)
-            messages.success(request, "Movimentação registrada.")
-            return redirect("module_list", campaign_id=campaign_id, key="itens")
+            changed = record_movement(actor=request.user, campaign=context["campaign"], data=request.POST)
+            messages.success(request, "Movimentação registrada." if changed else "Este envio já foi registrado. O estoque não foi alterado novamente.")
+            return redirect("stock_movement", campaign_id=campaign_id)
         except (ValidationError, ObjectDoesNotExist, IntegrityError, ValueError) as exc:
-            user_error(request, exc)
-    context.update(title="Movimentar estoque", active="itens", items=StockItem.objects.filter(campaign_id=campaign_id), warehouses=Warehouse.objects.filter(campaign_id=campaign_id), command_id=str(uuid.uuid4()))
+            form.add_error(None, " ".join(exc.messages) if isinstance(exc, ValidationError) else "Não foi possível registrar. Confira os dados e tente novamente.")
+    balance_query = StockBalance.objects.filter(item__campaign_id=campaign_id).select_related("item", "warehouse").order_by("item__name", "warehouse__name")
+    context.update(title="Materiais e estoque", active="materials", form=form, has_items=StockItem.objects.filter(campaign_id=campaign_id).exists(), balances=Paginator(balance_query, 20).get_page(request.GET.get("page")), stock_history=StockMovement.objects.filter(campaign_id=campaign_id).select_related("item", "warehouse").order_by("-created_at")[:10])
     return render(request, "workspace/stock.html", context)
 
 
@@ -475,18 +476,27 @@ def accounting_export(request, campaign_id, object_id):
 
 
 @login_required
+@sensitive_post_parameters("password")
 def team(request, campaign_id):
     context = campaign_context(request, campaign_id)
     campaign = context["campaign"]
     require_campaign_permission(request.user, campaign, "memberships.manage.campaign")
     roles = [role for role in Role.objects.filter(tenant=campaign.tenant).prefetch_related("permissions") if set(role.permissions.values_list("code", flat=True)).issubset(context["permissions"])]
+    from .access_choices import AccessForm
+    from .platform_services import create_selected_access
+    access_form = AccessForm(request.POST if request.method == "POST" and request.POST.get("action") == "create_access" else None, allowed=context["permissions"])
     invitation_token = ""
     if request.method == "POST":
         try:
             with transaction.atomic():
                 Campaign.objects.select_for_update().get(pk=campaign_id)
                 require_writable(campaign)
-                if request.POST.get("action") == "revoke":
+                if request.POST.get("action") == "create_access":
+                    if access_form.is_valid():
+                        create_selected_access(actor=request.user, campaign=campaign, **access_form.cleaned_data)
+                        messages.success(request, "Acesso criado com as permissões escolhidas. Entregue a senha inicial por um canal seguro.")
+                        return redirect("team", campaign_id=campaign_id)
+                elif request.POST.get("action") == "revoke":
                     member = Membership.objects.get(pk=request.POST.get("membership"), campaign=campaign)
                     if member.user_id == request.user.pk:
                         raise ValidationError("Peça a outro gestor para revogar o seu vínculo.")
@@ -508,9 +518,12 @@ def team(request, campaign_id):
                     audit(request.user, invitation, "membership.invited")
                 else:
                     raise ValidationError("Ação inválida.")
-        except (ValidationError, ObjectDoesNotExist, ValueError) as exc:
-            user_error(request, exc)
-    context.update(title="Equipe e acessos", active="team", members=Membership.objects.filter(campaign=campaign).select_related("user", "role").order_by("user__username"), roles=roles, invitation_token=invitation_token)
+        except (ValidationError, ObjectDoesNotExist, IntegrityError, ValueError) as exc:
+            if request.POST.get("action") == "create_access":
+                access_form.add_error(None, " ".join(exc.messages) if isinstance(exc, ValidationError) else "Não foi possível criar o acesso. Nenhuma criação parcial foi mantida.")
+            else:
+                user_error(request, exc)
+    context.update(title="Equipe e acessos", active="team", members=Membership.objects.filter(campaign=campaign).select_related("user", "role").prefetch_related("role__permissions").order_by("user__username"), roles=roles, invitation_token=invitation_token, access_form=access_form)
     return render(request, "workspace/team.html", context)
 
 
