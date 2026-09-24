@@ -72,3 +72,33 @@
    recebidos durante a operação.
 6. Produção depende dos gates do projeto, revisão e validação da revisão exata
    em staging. Este documento não é um comprovante de publicação em produção.
+
+## Resultado registrado às 19:20 UTC
+
+- Código: `ee51972561e39857e98496072749dc073adafae4`.
+- CI completo aprovado, incluindo PostgreSQL 14/15, segurança e artefato:
+  [execução 36046307189](https://github.com/iamnothuman7/nabio-elege/actions/runs/36046307189).
+- Staging: migration aplicada; RLS, dependências e revisão dos workers conferidos.
+  Regressão HTTPS: 105 requisições gerais + 51 plataforma + 17 acesso direto.
+  Teste extra: 116 requisições, incluindo material apenas com nome, depósito
+  automático, entrada/saída, reenvio idempotente, saldo insuficiente, ponto sem
+  coordenadas e criação de acesso com uma única permissão.
+- A primeira tentativa do teste extra usou `municipality` como tipo de território,
+  opção inexistente. Corrigida apenas a massa de teste para `operation`; a versão
+  da aplicação não precisou mudar. O teste extra completo então passou.
+- Rollback de código ao leitor `9d65102` e retorno a `ee51972` verificados no
+  staging, com os workers nas respectivas revisões. Um ponto sem coordenadas foi
+  lido com isolamento nas duas versões, sem mudar os dados ou desfazer a migration.
+- Backup criptografado final do staging: `20260924T192045Z-complete`, no servidor.
+- Staging desligado após os testes. Nenhum serviço de outro projeto ou Nginx
+  alterado. Produção continua em `2de3282a04a3c1473824c41338a828830193c3aa`, saudável;
+  contas existentes preservadas. A aprovação da revisão para produção foi solicitada.
+
+Para a futura publicação, promover primeiro o leitor compatível em produção,
+usando o comprovante arquivado de staging da revisão `9d65102`. A validação atual
+`application-validated.json` refere-se a `ee51972`; não deve ser apresentada como
+validação de outro SHA nem dispensar o gate. Preservar os dois comprovantes e
+registrar qualquer seleção do comprovante histórico antes de executar o rollout.
+Depois promover `ee51972` com a opção explícita de expansão, novo backup e
+verificações pós-publicação. Não usar o procedimento antigo de aplicação apenas
+diretamente sobre `2de3282`, pois ele não contém o leitor compatível.
